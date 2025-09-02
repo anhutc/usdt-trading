@@ -149,8 +149,6 @@ for i, ex_id in enumerate(EXCHANGES):
         st.sidebar.error(message)
     time.sleep(2) # Tăng độ trễ lên 2 giây giữa các lần kiểm tra để tránh giới hạn tỷ lệ
 
-print(f"Binance connectivity: {connectivity_results.get('binance')}")
-print(f"Bybit connectivity: {connectivity_results.get('bybit')}")
 # Hiển thị thông báo tổng quan
 connected_exchanges = [ex for ex, status in connectivity_results.items() if status == "success"]
 if connected_exchanges:
