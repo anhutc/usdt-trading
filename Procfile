@@ -1,1 +1,1 @@
-web: sh setup.sh && streamlit run app.py --server.port=$PORT --server.enableCORS=false --server.enableXsrfProtection=false
+web: gunicorn flask_app:app --log-file -
