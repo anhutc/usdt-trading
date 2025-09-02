@@ -47,6 +47,8 @@ def get_all_pairs(exchange_name):
         exchange_class = getattr(ccxt, exchange_name)
         exchange = exchange_class({
             'enableRateLimit': True,
+            'timeout': 30000,  # 30 seconds timeout
+            'rateLimit': 1000,  # 1 second between requests
         })
         markets = exchange.load_markets()
         
@@ -56,13 +58,13 @@ def get_all_pairs(exchange_name):
                 usdt_pairs.append(symbol)
         return usdt_pairs
     except ccxt.NetworkError as e:
-        st.error(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
+        st.warning(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
         return []
     except ccxt.ExchangeError as e:
-        st.error(f"Lỗi sàn giao dịch {exchange_name}: {e}")
+        st.warning(f"Lỗi sàn giao dịch {exchange_name}: {e}")
         return []
     except Exception as e:
-        st.error(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
+        st.warning(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
         return []
 
 # Function to filter pairs based on Doji candle and volume
@@ -72,6 +74,8 @@ def filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timefr
         exchange_class = getattr(ccxt, exchange_name)
         exchange = exchange_class({
             'enableRateLimit': True,
+            'timeout': 30000,  # 30 seconds timeout
+            'rateLimit': 1000,  # 1 second between requests
         })
 
         # Fetch candles for Doji check and average volume
@@ -146,13 +150,15 @@ def get_candle_data(pair, exchange_name, timeframe, limit):
         exchange_class = getattr(ccxt, exchange_name)
         exchange = exchange_class({
             'enableRateLimit': True,
+            'timeout': 30000,  # 30 seconds timeout
+            'rateLimit': 1000,  # 1 second between requests
         })
         ohlcvs = exchange.fetch_ohlcv(pair, timeframe, limit=limit)
         df = pd.DataFrame(ohlcvs, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
         return df
     except Exception as e:
-        st.error(f"Không thể lấy dữ liệu nến cho {pair} trên {exchange_name}: {e}")
+        st.warning(f"Không thể lấy dữ liệu nến cho {pair} trên {exchange_name}: {e}")
         return pd.DataFrame()
 
 # Function to calculate Simple Moving Average (SMA)
@@ -201,6 +207,10 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### Sàn giao dịch")
 exchanges = ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit'] # Using lowercase for ccxt exchange IDs
 selected_exchanges = []
+
+# Add info about exchange status
+st.sidebar.markdown("*💡 MEXC và Gate thường hoạt động tốt nhất trên Streamlit Cloud*")
+
 for exchange_name in exchanges:
     if st.sidebar.checkbox(exchange_name.capitalize(), value=False, disabled=st.session_state.filtering_in_progress, key=f"exchange_{exchange_name}"):
         selected_exchanges.append(exchange_name)
@@ -247,18 +257,22 @@ avg_volume_candles = st.sidebar.number_input('Số nến tính Volume trung bìn
 def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futures_tokens, max_results_input, status_placeholder, progress_placeholder):
 
     def _fetch_and_filter_initial_pairs_for_exchange(exchange_name, exclude_leverage_tokens, exclude_futures_tokens):
-        all_pairs = get_all_pairs(exchange_name)
-        filtered_initial_pairs = []
-        for pair in all_pairs:
-            exclude = False
-            if exclude_leverage_tokens and ('UP/' in pair or 'DOWN/' in pair or 'BULL/' in pair or 'BEAR/' in pair):
-                exclude = True
-            if exclude_futures_tokens and ('PERP/' in pair or 'FUTURES/' in pair):
-                exclude = True
-            
-            if not exclude:
-                filtered_initial_pairs.append(pair)
-        return exchange_name, filtered_initial_pairs
+        try:
+            all_pairs = get_all_pairs(exchange_name)
+            filtered_initial_pairs = []
+            for pair in all_pairs:
+                exclude = False
+                if exclude_leverage_tokens and ('UP/' in pair or 'DOWN/' in pair or 'BULL/' in pair or 'BEAR/' in pair):
+                    exclude = True
+                if exclude_futures_tokens and ('PERP/' in pair or 'FUTURES/' in pair):
+                    exclude = True
+                
+                if not exclude:
+                    filtered_initial_pairs.append(pair)
+            return exchange_name, filtered_initial_pairs
+        except Exception as e:
+            st.warning(f"Lỗi khi xử lý sàn {exchange_name}: {e}")
+            return exchange_name, []
 
     try:
         status_placeholder.info("Đang tìm kiếm... Vui lòng chờ.")
@@ -282,7 +296,7 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
             return
 
         all_exchanges_initial_pairs = {} # Store results from concurrent fetching
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:  # Limit concurrent requests
             futures = {executor.submit(_fetch_and_filter_initial_pairs_for_exchange, exchange_name, exclude_leverage_tokens, exclude_futures_tokens): exchange_name for exchange_name in selected_exchanges}
             for i, future in enumerate(concurrent.futures.as_completed(futures)):
                 if st.session_state.stop_filtering:
@@ -292,7 +306,7 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
                     exchange_name_key, filtered_initial_pairs = future.result()
                     all_exchanges_initial_pairs[exchange_name_key] = filtered_initial_pairs
                 except Exception as exc:
-                    st.error(f"Sàn {exchange_name_result} tạo ra một ngoại lệ: {exc}")
+                    st.warning(f"Sàn {exchange_name_result} tạo ra một ngoại lệ: {exc}")
                 finally:
                     progress_percentage_fetch = (i + 1) / total_exchanges
                     my_bar.progress(progress_percentage_fetch, text=f"Đang tải dữ liệu sàn: {exchange_name_result.capitalize()}...")
@@ -340,6 +354,8 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
                         exchange_class = getattr(ccxt, exchange_name)
                         exchange = exchange_class({
                             'enableRateLimit': True,
+                            'timeout': 30000,  # 30 seconds timeout
+                            'rateLimit': 1000,  # 1 second between requests
                         })
                         ticker = exchange.fetch_ticker(pair)
                         current_price = ticker['last']
@@ -362,8 +378,14 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
             current_exchange_idx += 1 # Increment after processing all pairs for the current exchange
         
         my_bar.progress(1.0, text="Hoàn thành!") # Ensure progress bar reaches 1.0 (100%) at the end
-        status_placeholder.success("Hoàn thành! Kiểm tra các cặp đã tìm thấy bên dưới.")
-
+        
+        # Show exchange status summary
+        working_exchanges = [ex for ex in selected_exchanges if all_exchanges_initial_pairs.get(ex, [])]
+        if working_exchanges:
+            status_placeholder.success(f"Hoàn thành! Các sàn hoạt động: {', '.join([ex.capitalize() for ex in working_exchanges])}")
+        else:
+            status_placeholder.warning("Không có sàn nào hoạt động. Vui lòng thử lại sau hoặc chọn sàn khác.")
+        
         if st.session_state.current_filtered_pairs_list:
             df_filtered_pairs = pd.DataFrame(st.session_state.current_filtered_pairs_list)
             st.session_state.df_filtered_pairs = df_filtered_pairs # Store in session state
