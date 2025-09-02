@@ -66,6 +66,9 @@ def index():
         connectivity_results[ex_id] = {'message': message, 'status': status}
         time.sleep(1) # Tăng độ trễ giữa các lần kiểm tra
 
+    # Chuyển đổi dict sang list các tuple để tránh lỗi parsing template Jinja2
+    connectivity_items = connectivity_results.items()
+
     html_output = """
     <!DOCTYPE html>
     <html lang="en">
@@ -87,10 +90,10 @@ def index():
     <body>
         <div class="container">
             <h1>Kiểm Tra Kết Nối Sàn (Public Endpoints)</h1>
-            {% for ex_id, result in connectivity_results.items() %}
+            {% for ex_id, result in connectivity_items %}
                 <div class="result-item {{ result.status }}">{{ result.message }}</div>
             {% endfor %}
-            {% set connected_exchanges = [ex for ex, result in connectivity_results.items() if result.status == 'success'] %}
+            {% set connected_exchanges = [ex for ex, result in connectivity_items if result.status == 'success'] %}
             {% if connected_exchanges %}
                 <div class="result-item info">Đã kết nối thành công với: {{ ', '.join(connected_exchanges) }}</div>
             {% else %}
@@ -100,7 +103,7 @@ def index():
     </body>
     </html>
     """
-    return render_template_string(html_output, connectivity_results=connectivity_results)
+    return render_template_string(html_output, connectivity_items=connectivity_items)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
