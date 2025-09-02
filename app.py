@@ -80,6 +80,7 @@ def fetch_all_usdt_pairs(exchange_id):
     exchange = get_exchange(exchange_id)
     if not exchange:
         st.error(f"Không thể khởi tạo sàn {exchange_id}.")
+        logging.error(f"Could not initialize exchange {exchange_id}.") # Thêm logging
         return []
 
     try:
@@ -169,13 +170,42 @@ with st.sidebar.expander("Tùy chỉnh Doji & Volume"):
 
 # Nút tìm kiếm
 if st.sidebar.button("Tìm kiếm cặp USDT phù hợp"):
-    st.write("Đang tìm kiếm...")
-    # Logic tìm kiếm sẽ được thêm vào đây
-    st.info("Chức năng tìm kiếm sẽ được triển khai chi tiết sau.")
+    st.session_state.filtering_status = "Đang tìm kiếm..."
+    st.session_state.filtered_pairs_data = pd.DataFrame()
+    
+    selected_exchanges = st.session_state.selected_exchanges
+    all_filtered_pairs = []
+
+    status_message = st.empty()
+    progress_bar = st.progress(0)
+
+    for i, exchange_id in enumerate(selected_exchanges):
+        status_message.info(f"Đang lấy cặp USDT từ {exchange_id}...")
+        pairs = fetch_all_usdt_pairs(exchange_id)
+        if pairs:
+            df_pairs = pd.DataFrame({'Sàn giao dịch': exchange_id, 'Cặp usdt': pairs})
+            all_filtered_pairs.append(df_pairs)
+        progress_bar.progress((i + 1) / len(selected_exchanges))
+        time.sleep(1) # Thêm độ trễ giữa các lần lấy dữ liệu sàn
+    
+    if all_filtered_pairs:
+        st.session_state.filtered_pairs_data = pd.concat(all_filtered_pairs, ignore_index=True)
+        st.session_state.filtering_status = f"Hoàn tất tìm kiếm. Tìm thấy {len(st.session_state.filtered_pairs_data)} cặp."
+        st.success(st.session_state.filtering_status)
+    else:
+        st.session_state.filtering_status = "Không tìm thấy cặp nào."
+        st.warning(st.session_state.filtering_status)
+
+    status_message.empty()
+    progress_bar.empty()
 
 # Khu vực hiển thị kết quả chính
 st.subheader("Kết quả lọc cặp USDT")
-st.write("Các cặp giao dịch phù hợp sẽ hiển thị ở đây sau khi tìm kiếm.")
+if not st.session_state.filtered_pairs_data.empty:
+    st.dataframe(st.session_state.filtered_pairs_data)
+else:
+    st.write(st.session_state.filtering_status)
+
 
 st.subheader("Chi tiết cặp & Biểu đồ")
 st.write("Thông tin chi tiết và biểu đồ nến sẽ hiển thị ở đây khi một cặp được chọn.")
