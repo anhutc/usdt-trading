@@ -5,6 +5,9 @@ import logging
 import time
 import functools # Thêm import functools
 import pandas as pd # Thêm import pandas
+import numpy as np # Thêm import numpy
+import plotly.graph_objects as go # Thêm import plotly
+from datetime import datetime
 
 # --- Cấu hình Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -79,6 +82,87 @@ def fetch_all_usdt_pairs(exchange_id):
     except Exception as e:
         logging.error(f"Failed to fetch USDT pairs from {exchange_id}: {e}", exc_info=True)
         return []
+
+
+# --- Hàm lấy dữ liệu nến OHLCV ---
+@functools.lru_cache(ttl=60) # Cache kết quả trong 1 phút
+def fetch_ohlcv_data(exchange_id, symbol, timeframe, limit=100):
+    exchange = get_exchange(exchange_id)
+    if not exchange:
+        logging.error(f"Không thể khởi tạo sàn {exchange_id} để lấy OHLCV.")
+        return None
+
+    try:
+        ohlcv = exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+        if not ohlcv: return None
+
+        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df = df.set_index('timestamp')
+        return df
+    except Exception as e:
+        logging.error(f"Lỗi khi lấy OHLCV {symbol} từ {exchange_id} ({timeframe}): {e}", exc_info=True)
+        return None
+
+# --- Hàm tính Đường trung bình động đơn giản (SMA) ---
+def calculate_sma(df, window):
+    return df['close'].rolling(window=window).mean()
+
+# --- Hàm xây dựng URL giao dịch trực tiếp ---
+def build_trade_url(exchange_id, symbol):
+    base_url = "#"
+    if exchange_id == 'binance':
+        base_url = f"https://www.binance.com/en/trade/{symbol.replace('/', '_')}"
+    elif exchange_id == 'okx':
+        base_url = f"https://www.okx.com/trade-spot/{symbol.replace('/', '-')}"
+    elif exchange_id == 'huobi':
+        base_url = f"https://www.huobi.com/exchange/{symbol.lower().replace('/', '_')}"
+    elif exchange_id == 'gate':
+        base_url = f"https://www.gate.io/trade/{symbol.replace('/', '_')}"
+    elif exchange_id == 'mexc':
+        base_url = f"https://www.mexc.com/exchange/{symbol.replace('/', '_')}"
+    elif exchange_id == 'bybit':
+        base_url = f"https://www.bybit.com/trade/{symbol.lower().replace('/', '/')}"
+    return base_url
+
+# --- Hàm kiểm tra nến Doji ---
+def is_doji(open_price, high_price, low_price, close_price, max_body_percent, body_method="Theo biên độ nến"):
+    body = abs(open_price - close_price)
+    if body_method == "Theo biên độ nến":
+        candle_range = high_price - low_price
+        if candle_range == 0: return True # Nến flat, coi là doji
+        body_percentage = (body / candle_range) * 100
+    else: # Theo giá mở
+        if open_price == 0: return False # Tránh chia cho 0
+        body_percentage = (body / open_price) * 100
+    
+    return body_percentage <= max_body_percent
+
+# --- Hàm kiểm tra khối lượng và Doji ---
+def check_volume_and_doji(exchange_id, symbol, doji_timeframe, doji_lookback, doji_max_body_percent, doji_body_method, volume_lookback):
+    df_ohlcv = fetch_ohlcv_data(exchange_id, symbol, doji_timeframe, limit=max(doji_lookback, volume_lookback) + 10) # Lấy thêm nến để đảm bảo tính toán
+    if df_ohlcv is None or df_ohlcv.empty: return False
+
+    # Lọc dữ liệu gần nhất (không quá 30 ngày)
+    df_ohlcv = df_ohlcv[df_ohlcv.index > (datetime.now() - pd.Timedelta(days=30))]
+    if len(df_ohlcv) < doji_lookback + volume_lookback: return False
+
+    # Kiểm tra Doji cho các nến gần nhất
+    doji_candles = []
+    for i in range(1, doji_lookback + 1):
+        idx = -i
+        open_p, high_p, low_p, close_p = df_ohlcv.iloc[idx][['open', 'high', 'low', 'close']]
+        if is_doji(open_p, high_p, low_p, close_p, doji_max_body_percent, doji_body_method):
+            doji_candles.append(df_ohlcv.iloc[idx])
+
+    if not doji_candles: return False
+
+    # Tính toán khối lượng trung bình và kiểm tra
+    recent_volume = df_ohlcv['volume'].iloc[-volume_lookback-1:-1].mean()
+    for doji_c in doji_candles:
+        if doji_c['volume'] > recent_volume * 1.5: # Khối lượng nến Doji gấp 1.5 lần trung bình
+            return True
+    return False
 
 
 EXCHANGES = ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit']
@@ -286,8 +370,9 @@ def filter_pairs():
                 pairs = [p for p in pairs if not any(keyword in p.upper() for keyword in ['UP/', 'DOWN/', 'BULL/', 'BEAR/', 'PERP', 'FUTURES'])]
             
             for pair in pairs:
-                # Tạm thời bỏ qua logic Doji và khối lượng, sẽ thêm sau
-                all_filtered_pairs.append({'Sàn giao dịch': exchange_id, 'Cặp usdt': pair})
+                # Kiểm tra Doji và khối lượng
+                if check_volume_and_doji(exchange_id, pair, doji_timeframe, doji_lookback, doji_max_body_percent, doji_body_method, volume_lookback):
+                    all_filtered_pairs.append({'Sàn giao dịch': exchange_id, 'Cặp usdt': pair})
     
     # Áp dụng giới hạn kết quả
     if limit_results > 0:
@@ -299,10 +384,21 @@ def filter_pairs():
     
     # Thêm các cột placeholder cho Giá hiện tại, Giá cao nhất, Giá thấp nhất, Link Sàn
     if not df_filtered_pairs.empty:
-        df_filtered_pairs['Giá hiện tại'] = "N/A"
-        df_filtered_pairs['Giá cao nhất'] = "N/A"
-        df_filtered_pairs['Giá thấp nhất'] = "N/A"
-        df_filtered_pairs['Link Sàn'] = "#"
+        for index, row in df_filtered_pairs.iterrows():
+            exchange_id = row['Sàn giao dịch']
+            pair = row['Cặp usdt']
+            
+            exchange = get_exchange(exchange_id)
+            if exchange:
+                try:
+                    ticker = exchange.fetch_ticker(pair)
+                    df_filtered_pairs.loc[index, 'Giá hiện tại'] = ticker['last']
+                    df_filtered_pairs.loc[index, 'Giá cao nhất'] = ticker['high']
+                    df_filtered_pairs.loc[index, 'Giá thấp nhất'] = ticker['low']
+                except Exception as e:
+                    logging.warning(f"Không thể lấy ticker cho {pair} trên {exchange_id}: {e}")
+            
+            df_filtered_pairs.loc[index, 'Link Sàn'] = build_trade_url(exchange_id, pair)
     
     filtered_pairs_data = df_filtered_pairs.to_dict(orient='records')
     filtering_status = f"Hoàn tất tìm kiếm. Tìm thấy {len(filtered_pairs_data)} cặp."
@@ -327,6 +423,174 @@ def filter_pairs():
                                   default_selected_exchanges=default_selected_exchanges,
                                   filtered_pairs_data=filtered_pairs_data,
                                   filtering_status=filtering_status)
+
+
+@app.route('/detail/<exchange_id>/<path:pair_symbol>')
+def pair_detail(exchange_id, pair_symbol):
+    # Lấy timeframe từ query parameter hoặc mặc định là 1h
+    timeframe = request.args.get('timeframe', '1h')
+    limit = 100 # Số lượng nến mặc định
+
+    df_ohlcv = fetch_ohlcv_data(exchange_id, pair_symbol, timeframe, limit=limit)
+
+    if df_ohlcv is None or df_ohlcv.empty:
+        return render_template_string("""
+        <h1>Lỗi</h1><p>Không thể tải dữ liệu nến cho {{ pair_symbol }} trên {{ exchange_id }}.</p>
+        """, exchange_id=exchange_id, pair_symbol=pair_symbol)
+
+    # Tính toán SMA
+    df_ohlcv['SMA_7'] = calculate_sma(df_ohlcv, 7)
+    df_ohlcv['SMA_25'] = calculate_sma(df_ohlcv, 25)
+    df_ohlcv['SMA_99'] = calculate_sma(df_ohlcv, 99)
+
+    # Thông tin nến gần nhất
+    last_candle = df_ohlcv.iloc[-1]
+    current_price = last_candle['close']
+    open_price = last_candle['open']
+    high_price = last_candle['high']
+    low_price = last_candle['low']
+    close_price = last_candle['close']
+    volume = last_candle['volume']
+    
+    # Tính toán độ biến động (Volatility) và Biên độ nến (Range)
+    volatility = (high_price - low_price) / close_price * 100 if close_price else 0
+    candle_range = (high_price - low_price)
+    body = abs(open_price - close_price)
+    upper_shadow = high_price - max(open_price, close_price)
+    lower_shadow = min(open_price, close_price) - low_price
+
+    # Tính toán khối lượng bằng USDT
+    volume_usdt = volume * close_price
+
+    # Xây dựng biểu đồ nến với Plotly
+    fig = go.Figure(data=[
+        go.Candlestick(
+            x=df_ohlcv.index,
+            open=df_ohlcv['open'],
+            high=df_ohlcv['high'],
+            low=df_ohlcv['low'],
+            close=df_ohlcv['close'],
+            name='Nến'
+        ),
+        go.Scatter(x=df_ohlcv.index, y=df_ohlcv['SMA_7'], mode='lines', name='SMA 7', line=dict(color='orange', width=1)),
+        go.Scatter(x=df_ohlcv.index, y=df_ohlcv['SMA_25'], mode='lines', name='SMA 25', line=dict(color='purple', width=1)),
+        go.Scatter(x=df_ohlcv.index, y=df_ohlcv['SMA_99'], mode='lines', name='SMA 99', line=dict(color='blue', width=1))
+    ])
+
+    fig.update_layout(
+        title=f'{pair_symbol} - Biểu đồ Nến ({timeframe})',
+        xaxis_rangeslider_visible=False,
+        xaxis_title='Thời gian',
+        yaxis_title='Giá',
+        template='plotly_dark',
+        height=600
+    )
+
+    # Biểu đồ khối lượng riêng biệt
+    fig_volume = go.Figure(data=[
+        go.Bar(
+            x=df_ohlcv.index,
+            y=df_ohlcv['volume'],
+            name='Khối lượng',
+            marker_color='rgba(0,128,0,0.7)'
+        )
+    ])
+    fig_volume.update_layout(
+        xaxis_title='Thời gian',
+        yaxis_title='Khối lượng',
+        template='plotly_dark',
+        height=200
+    )
+
+    chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    volume_chart_html = fig_volume.to_html(full_html=False, include_plotlyjs='cdn')
+    trade_url = build_trade_url(exchange_id, pair_symbol)
+
+    detail_html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Chi Tiết Cặp {{ pair_symbol }}</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; background-color: #2e3b4e; color: #f0f2f6; line-height: 1.6; }
+            .container { max-width: 1200px; margin: auto; padding: 20px; background-color: #3b4759; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+            h1, h2, h3 { color: #4CAF50; text-align: center; margin-bottom: 20px; }
+            .info-box { background-color: #4a596b; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; }
+            .info-item { flex: 1 1 calc(33% - 40px); min-width: 200px; background-color: #3b4759; padding: 10px; border-radius: 5px; }
+            .info-item strong { color: #4CAF50; }
+            .chart-container { background-color: #3b4759; padding: 20px; border-radius: 8px; margin-top: 20px; }
+            .timeframe-selector { text-align: center; margin-bottom: 20px; }
+            .timeframe-selector a { color: #4CAF50; text-decoration: none; padding: 8px 15px; border: 1px solid #4CAF50; border-radius: 5px; margin: 0 5px; transition: background-color 0.3s ease; }
+            .timeframe-selector a.active, .timeframe-selector a:hover { background-color: #4CAF50; color: white; }
+            .trade-link { display: block; text-align: center; margin-top: 20px; padding: 10px 20px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.3s ease; }
+            .trade-link:hover { background-color: #1976D2; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Chi Tiết Cặp: {{ pair_symbol }} ({{ exchange_id | capitalize }})</h1>
+            
+            <div class="timeframe-selector">
+                <h3>Chọn Khung Thời Gian:</h3>
+                <a href="/detail/{{ exchange_id }}/{{ pair_symbol }}?timeframe=1m" {% if timeframe == '1m' %}class="active"{% endif %}>1m</a>
+                <a href="/detail/{{ exchange_id }}/{{ pair_symbol }}?timeframe=5m" {% if timeframe == '5m' %}class="active"{% endif %}>5m</a>
+                <a href="/detail/{{ exchange_id }}/{{ pair_symbol }}?timeframe=15m" {% if timeframe == '15m' %}class="active"{% endif %}>15m</a>
+                <a href="/detail/{{ exchange_id }}/{{ pair_symbol }}?timeframe=1h" {% if timeframe == '1h' %}class="active"{% endif %}>1h</a>
+                <a href="/detail/{{ exchange_id }}/{{ pair_symbol }}?timeframe=4h" {% if timeframe == '4h' %}class="active"{% endif %}>4h</a>
+                <a href="/detail/{{ exchange_id }}/{{ pair_symbol }}?timeframe=1d" {% if timeframe == '1d' %}class="active"{% endif %}>1d</a>
+            </div>
+
+            <div class="info-box">
+                <div class="info-item"><strong>Giá hiện tại:</strong> {{ current_price | round(5) }}</div>
+                <div class="info-item"><strong>Giá mở:</strong> {{ open_price | round(5) }}</div>
+                <div class="info-item"><strong>Giá cao:</strong> {{ high_price | round(5) }}</div>
+                <div class="info-item"><strong>Giá thấp:</strong> {{ low_price | round(5) }}</div>
+                <div class="info-item"><strong>Giá đóng:</strong> {{ close_price | round(5) }}</div>
+                <div class="info-item"><strong>Khối lượng:</strong> {{ volume | round(2) }}</div>
+                <div class="info-item"><strong>Khối lượng USDT:</strong> {{ volume_usdt | round(2) }}</div>
+                <div class="info-item"><strong>Độ biến động:</strong> {{ volatility | round(2) }}%</div>
+                <div class="info-item"><strong>Biên độ nến:</strong> {{ candle_range | round(5) }}</div>
+                <div class="info-item"><strong>Thân nến:</strong> {{ body | round(5) }}</div>
+                <div class="info-item"><strong>Bóng trên:</strong> {{ upper_shadow | round(5) }}</div>
+                <div class="info-item"><strong>Bóng dưới:</strong> {{ lower_shadow | round(5) }}</div>
+                <div class="info-item"><strong>SMA 7:</strong> {{ df_ohlcv['SMA_7'].iloc[-1] | round(5) }}</div>
+                <div class="info-item"><strong>SMA 25:</strong> {{ df_ohlcv['SMA_25'].iloc[-1] | round(5) }}</div>
+                <div class="info-item"><strong>SMA 99:</strong> {{ df_ohlcv['SMA_99'].iloc[-1] | round(5) }}</div>
+            </div>
+
+            <div class="chart-container">
+                {{ chart_html | safe }}
+                {{ volume_chart_html | safe }}
+            </div>
+
+            <a href="{{ trade_url }}" target="_blank" class="trade-link">Giao Dịch trên {{ exchange_id | capitalize }}</a>
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(detail_html,
+                                  exchange_id=exchange_id,
+                                  pair_symbol=pair_symbol,
+                                  timeframe=timeframe,
+                                  current_price=current_price,
+                                  open_price=open_price,
+                                  high_price=high_price,
+                                  low_price=low_price,
+                                  close_price=close_price,
+                                  volume=volume,
+                                  volume_usdt=volume_usdt,
+                                  volatility=volatility,
+                                  candle_range=candle_range,
+                                  body=body,
+                                  upper_shadow=upper_shadow,
+                                  lower_shadow=lower_shadow,
+                                  df_ohlcv=df_ohlcv,
+                                  chart_html=chart_html,
+                                  volume_chart_html=volume_chart_html,
+                                  trade_url=trade_url)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)

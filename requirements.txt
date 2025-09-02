@@ -5,3 +5,5 @@ altair
 requests
 Flask
 gunicorn
+plotly
+numpy
