@@ -69,6 +69,8 @@ def index():
     # Chuyển đổi dict sang list các tuple để tránh lỗi parsing template Jinja2
     connectivity_items = connectivity_results.items()
 
+    connected_exchanges = [ex for ex, result in connectivity_items if result['status'] == 'success']
+
     html_output = """
     <!DOCTYPE html>
     <html lang="en">
@@ -93,7 +95,6 @@ def index():
             {% for ex_id, result in connectivity_items %}
                 <div class="result-item {{ result.status }}">{{ result.message }}</div>
             {% endfor %}
-            {% set connected_exchanges = [ex for ex, result in connectivity_items if result.status == 'success'] %}
             {% if connected_exchanges %}
                 <div class="result-item info">Đã kết nối thành công với: {{ ', '.join(connected_exchanges) }}</div>
             {% else %}
@@ -103,7 +104,7 @@ def index():
     </body>
     </html>
     """
-    return render_template_string(html_output, connectivity_items=connectivity_items)
+    return render_template_string(html_output, connectivity_items=connectivity_items, connected_exchanges=connected_exchanges)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
