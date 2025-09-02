@@ -100,7 +100,7 @@ def check_exchange_connectivity(exchange_id, public_endpoint=None):
     }
     try:
         if exchange_id == 'binance':
-            url = public_endpoint or "https://data.binance.com/api/v3/exchangeInfo" # Endpoint public để lấy thông tin sàn
+            url = public_endpoint or "https://api.binance.com/api/v3/ping" # Endpoint public để lấy thông tin sàn
         elif exchange_id == 'huobi':
             url = public_endpoint or "https://api.huobi.pro/v1/common/symbols" # Một public endpoint khác không cần xác thực
         elif exchange_id == 'okx':
@@ -110,7 +110,7 @@ def check_exchange_connectivity(exchange_id, public_endpoint=None):
         elif exchange_id == 'mexc':
             url = public_endpoint or "https://api.mexc.com/api/v3/exchangeInfo"
         elif exchange_id == 'bybit':
-            url = public_endpoint or "https://api.bybit.com/v5/market/time" # Endpoint public để lấy thời gian máy chủ
+            url = public_endpoint or "https://api.bybit.com/v2/public/time" # Endpoint public để lấy thời gian máy chủ
         else:
             return f"Không có public endpoint mặc định cho sàn {exchange_id}", "warning"
 
@@ -138,7 +138,7 @@ st.sidebar.subheader("Kiểm tra kết nối sàn (Public Endpoints)")
 EXCHANGES = ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit']
 connectivity_results = {}
 
-for ex_id in EXCHANGES:
+for i, ex_id in enumerate(EXCHANGES):
     message, status = check_exchange_connectivity(ex_id)
     connectivity_results[ex_id] = status
     if status == "success":
@@ -149,6 +149,8 @@ for ex_id in EXCHANGES:
         st.sidebar.error(message)
     time.sleep(2) # Tăng độ trễ lên 2 giây giữa các lần kiểm tra để tránh giới hạn tỷ lệ
 
+print(f"Binance connectivity: {connectivity_results.get('binance')}")
+print(f"Bybit connectivity: {connectivity_results.get('bybit')}")
 # Hiển thị thông báo tổng quan
 connected_exchanges = [ex for ex, status in connectivity_results.items() if status == "success"]
 if connected_exchanges:
