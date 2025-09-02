@@ -99,7 +99,7 @@ def check_exchange_connectivity(exchange_id, public_endpoint=None):
     }
     try:
         if exchange_id == 'binance':
-            url = public_endpoint or "https://api.binance.com/api/v3/ping"
+            url = public_endpoint or "https://data.binance.com/api/v3/ping"
         elif exchange_id == 'huobi':
             url = public_endpoint or "https://api.huobi.pro/v1/common/symbols" # Một public endpoint khác không cần xác thực
         elif exchange_id == 'okx':
@@ -146,7 +146,7 @@ for ex_id in EXCHANGES:
         st.sidebar.warning(message)
     else:
         st.sidebar.error(message)
-    time.sleep(1) # Thêm độ trễ 1 giây giữa các lần kiểm tra
+    time.sleep(2) # Tăng độ trễ lên 2 giây giữa các lần kiểm tra để tránh giới hạn tỷ lệ
 
 # Hiển thị thông báo tổng quan
 connected_exchanges = [ex for ex, status in connectivity_results.items() if status == "success"]
