@@ -4,6 +4,7 @@ import pandas as pd
 import altair as alt
 import requests
 import logging
+import time
 
 # --- Cấu hình Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -93,6 +94,9 @@ def fetch_all_usdt_pairs(exchange_id):
 
 def check_exchange_connectivity(exchange_id, public_endpoint=None):
     """Kiểm tra kết nối đến một sàn giao dịch bằng một public endpoint đơn giản."""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
     try:
         if exchange_id == 'binance':
             url = public_endpoint or "https://api.binance.com/api/v3/ping"
@@ -109,7 +113,7 @@ def check_exchange_connectivity(exchange_id, public_endpoint=None):
         else:
             return f"Không có public endpoint mặc định cho sàn {exchange_id}", "warning"
 
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             return f"Kết nối đến {exchange_id} thành công!", "success"
         else:
@@ -142,6 +146,7 @@ for ex_id in EXCHANGES:
         st.sidebar.warning(message)
     else:
         st.sidebar.error(message)
+    time.sleep(1) # Thêm độ trễ 1 giây giữa các lần kiểm tra
 
 # Hiển thị thông báo tổng quan
 connected_exchanges = [ex for ex, status in connectivity_results.items() if status == "success"]
