@@ -1,0 +1,96 @@
+Ứng dụng công cụ hỗ trợ giao dịch tiền điện tử có tên "Giao Dịch USDT". Nó giúp người dùng tìm kiếm các cặp tiền điện tử giao dịch với USDT có mẫu nến "Doji" kèm theo khối lượng giao dịch cao trên các sàn được chọn, và sau đó hiển thị biểu đồ nến chi tiết với các đường trung bình động (SMA) cho các cặp đã chọn.
+
+Dưới đây là giải thích chi tiết về các thành phần và chức năng chính của ứng dụng:
+
+**1. Mục đích chính:**
+
+*   **Tìm kiếm cặp giao dịch:** Phát hiện các cặp USDT tiềm năng dựa trên các tiêu chí kỹ thuật cụ thể (nến Doji và khối lượng).
+*   **Phân tích biểu đồ:** Cung cấp biểu đồ nến tương tác, bao gồm các chỉ báo kỹ thuật như Đường trung bình động đơn giản (SMA), để phân tích chi tiết các cặp đã lọc.
+
+**2. Xây dựng ứng dụng và chức năng:**
+
+*   Xây dựng giao diện người dùng web động.
+*   Kết nối và tương tác với nhiều sàn giao dịch tiền điện tử, lấy dữ liệu thị trường.
+*   Xử lý và thao tác dữ liệu, đặc biệt là với các bảng (DataFrame).
+*   Tạo các biểu đồ dữ liệu tương tác và trực quan (biểu đồ nến).
+*   Thực hiện các tác vụ song song để lấy dữ liệu từ nhiều sàn giao dịch hiệu quả hơn.
+
+**3. Quản lý trạng thái:**
+
+Ứng dụng sử dụng lưu trữ và duy trì trạng thái của các yếu tố giao diện người dùng và dữ liệu trên các lần chạy lại (rerun). Điều này đảm bảo trải nghiệm người dùng liền mạch. Các biến trạng thái quan trọng bao gồm:
+
+*   Theo dõi trạng thái của quá trình lọc.
+*   Lưu trữ và hiển thị kết quả các cặp đã lọc.
+*   Quản lý giới hạn số lượng kết quả hiển thị.
+*   Lưu trữ thông tin về cặp tiền điện tử được người dùng chọn để xem chi tiết.
+*   Quản lý khung thời gian đã chọn cho biểu đồ.
+
+**4. Bố cục giao diện người dùng và định kiểu (CSS):**
+
+*   Cấu hình tiêu đề trang, biểu tượng và bố cục toàn trang.
+*   Ứng dụng tích hợp CSS tùy chỉnh để cải thiện khả năng phản hồi trên các thiết bị di động, đảm bảo giao diện hiển thị tốt trên nhiều kích thước màn hình.
+*   Hiển thị tiêu đề chính của ứng dụng là "Giao Dịch USDT".
+*   Hiển thị động các thông báo trạng thái và thanh tiến trình trong quá trình tìm nạp và lọc dữ liệu.
+
+**5. Bộ lọc:**
+
+Các tùy chọn cấu hình và lọc chính:
+
+*   **Giới hạn kết quả :** Người dùng có thể đặt số lượng cặp tối đa muốn hiển thị. Nếu nhập 0, sẽ không giới hạn.
+*   **Sàn giao dịch :** Danh sách các sàn giao dịch tiền điện tử được hỗ trợ (`binance`, `okx`, `huobi`, `gate`, `mexc`, `bybit`)
+*   **Loại trừ :** Tùy chọn để loại bỏ các token đòn bẩy (ví dụ: UP/DOWN/BULL/BEAR) và hợp đồng tương lai (ví dụ: PERP/FUTURES) khỏi kết quả tìm kiếm.
+*   **Tùy chỉnh Doji & Volume:**
+    *   Số lượng nến gần nhất để kiểm tra mô hình Doji.
+    *   Khung thời gian của nến Doji để phân tích (ví dụ: 1 phút, 1 giờ, 1 ngày).
+    *   Phương pháp tính tỷ lệ thân nến Doji (ví dụ: "Theo biên độ nến" hoặc "Theo giá mở").
+    *   Tỷ lệ phần trăm thân nến tối đa để được coi là nến Doji.
+    *   Số lượng nến được sử dụng để tính khối lượng trung bình.
+
+**6. Các chức năng cốt lõi:**
+
+    *   Truy xuất tất cả các cặp giao dịch USDT từ một sàn giao dịch
+    *   Áp dụng các tối ưu hóa cấu hình riêng cho từng sàn (ví dụ: giới hạn tốc độ, thời gian chờ).
+    *   Bộ đệm (cache) kết quả trong 1 giờ để tăng tốc độ.
+    *   Xử lý các lỗi mạng và lỗi sàn giao dịch một cách linh hoạt, hiển thị cảnh báo cho người dùng.
+
+    *   Tìm nến Doji: Lấy dữ liệu nến và kiểm tra nến gần nhất để tìm mô hình Doji
+    *   Lọc dữ liệu gần nhất: Đảm bảo nến gần nhất không cũ hơn 30 ngày.
+    *   Kiểm tra khối lượng: Tính toán khối lượng trung bình gần nhất và xác định xem khối lượng của nến Doji có lớn hơn khối lượng trung bình hay không.
+    *   Bộ đệm kết quả trong 10 phút.
+*   Lấy dữ liệu OHLCV (Giá mở, giá cao, giá thấp, giá đóng, khối lượng) cho một cặp, sàn giao dịch, khung thời gian và giới hạn số lượng nến cụ thể.
+*   Tính toán Đường trung bình động đơn giản (SMA) cho một DataFrame và khung thời gian đã cho.
+*   Xây dựng URL giao dịch trực tiếp cho một cặp trên các sàn giao dịch khác nhau.
+
+**7. Quy trình lọc:**
+
+*   Hàm này được gọi khi nút "Tìm kiếm cặp usdt phù hợp" được nhấp.
+*   Lấy các cặp ban đầu từ các sàn giao dịch đã chọn một cách song song, giúp cải thiện hiệu suất.
+*   Lặp qua các cặp đã lấy, áp dụng logic lọc Doji/Khối lượng tuần tự cho từng cặp.
+*   Cập nhật thanh tiến trình và thông báo trạng thái một cách động.
+*   Cho phép người dùng dừng quá trình lọc giữa chừng.
+*   Lưu trữ kết quả
+*   Truy xuất giá hiện tại, giá cao nhất và giá thấp nhất cho mỗi cặp đã lọc
+
+**8. Hiển thị kết quả:**
+
+*   DataFrame bao gồm các cột như "Sàn giao dịch", "Cặp usdt", "Giá hiện tại", "Giá cao nhất", "Giá thấp nhất" và "Link Sàn" (với liên kết trực tiếp để giao dịch).
+*   Khi người dùng chọn một hàng trong DataFrame sẽ hiển thị chi tiết
+
+**9. Chế độ xem cặp chi tiết (Biểu đồ):**
+
+*   Khi một cặp được chọn từ DataFrame, thông tin chi tiết và biểu đồ nến sẽ được hiển thị.
+*   **Bộ chọn khung thời gian:** Người dùng có thể chọn các khung thời gian khác nhau (ví dụ: 1 giây, 15 phút, 1 giờ, 1 ngày) cho biểu đồ.
+*   **Xử lý dữ liệu nến:**
+    *   Lấy 100 nến cho cặp và khung thời gian đã chọn.
+    *   Bao gồm một bước làm sạch dữ liệu để loại bỏ các nến ngoại lệ (ví dụ: giá cao > 5 lần giá đóng).
+    *   Tính toán độ biến động, biên độ nến và các dạng phần trăm của chúng.
+    *   Tính toán khối lượng bằng USDT
+    *   Tính toán SMA cho các chu kỳ 7, 25 và 99.
+*   **Hiển thị thông tin:** Hiển thị các chỉ số chính của nến gần nhất (giá hiện tại, mở, cao, thấp, đóng, độ biến động, biên độ, SMA, khối lượng) trong một khối HTML được tạo kiểu.
+*   **Biểu đồ nến tương tác (Altair):**
+    *   Kết hợp biểu đồ nến với các đường SMA (7, 25, 99).
+    *   Bao gồm biểu đồ khối lượng riêng biệt bên dưới biểu đồ giá.
+    *   Cả hai biểu đồ đều tương tác, cho phép phóng to và kéo.
+    *   Các chú giải công cụ (tooltip) cung cấp thông tin chi tiết khi di chuột qua.
+
+Tóm lại, ứng dụng này là một trợ lý giao dịch tiền điện tử toàn diện giúp người dùng xác định các cơ hội giao dịch tiềm năng dựa trên các mẫu nến Doji và khối lượng, sau đó trực quan hóa dữ liệu giá lịch sử với các chỉ báo kỹ thuật trên nhiều sàn giao dịch.
