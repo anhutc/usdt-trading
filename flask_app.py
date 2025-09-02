@@ -63,7 +63,7 @@ def check_exchange_connectivity(exchange_id, public_endpoint=None):
 
 
 # --- Hàm lấy cặp USDT ---
-@functools.lru_cache(maxsize=128) # Thay thế @app.cache bằng @functools.lru_cache
+@functools.lru_cache() # Thay thế @functools.lru_cache(maxsize=128) bằng @functools.lru_cache()
 def fetch_all_usdt_pairs(exchange_id):
     """
     Truy xuất tất cả các cặp giao dịch USDT từ một sàn giao dịch.
@@ -85,7 +85,7 @@ def fetch_all_usdt_pairs(exchange_id):
 
 
 # --- Hàm lấy dữ liệu nến OHLCV ---
-@functools.lru_cache(ttl=60) # Cache kết quả trong 1 phút
+@functools.lru_cache() # Thay thế @functools.lru_cache(ttl=60) bằng @functools.lru_cache()
 def fetch_ohlcv_data(exchange_id, symbol, timeframe, limit=100):
     exchange = get_exchange(exchange_id)
     if not exchange:
