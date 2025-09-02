@@ -21,15 +21,15 @@ Khi triển khai trên Streamlit Cloud, một số sàn giao dịch có thể kh
 ### Sàn hoạt động tốt:
 - **MEXC** - Thường hoạt động ổn định
 - **Gate.io** - Tương đối ổn định
+- **OKX** - Hoạt động tốt trên Streamlit Cloud
 
 ### Sàn có thể gặp vấn đề:
 - **Binance** - Có thể bị chặn hoặc rate limit
-- **OKX** - Đôi khi gặp timeout
 - **Huobi** - Có thể bị chặn ở một số khu vực
 - **Bybit** - Đôi khi gặp vấn đề kết nối
 
 ### Giải pháp:
-1. Chỉ chọn MEXC và Gate để có kết quả tốt nhất
+1. Chỉ chọn MEXC, Gate và OKX để có kết quả tốt nhất
 2. Thử lại sau vài phút nếu gặp lỗi
 3. Kiểm tra kết nối internet
 4. Sử dụng VPN nếu cần thiết

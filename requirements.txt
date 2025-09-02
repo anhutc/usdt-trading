@@ -1,5 +1,6 @@
-streamlit
-ccxt
-pandas
-altair
-requests
+streamlit==1.28.1
+ccxt==4.1.13
+pandas==2.1.3
+altair==5.2.0
+requests==2.31.0
+numpy==1.24.3

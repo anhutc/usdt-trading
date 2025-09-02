@@ -33,7 +33,45 @@ if 'current_filtered_pairs_list' not in st.session_state:
     st.session_state.current_filtered_pairs_list = []
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(
+    layout="wide",
+    page_title="Giao Dịch USDT",
+    page_icon="📈",
+    initial_sidebar_state="expanded"
+)
+
+# Add custom CSS for better mobile experience
+st.markdown("""
+<style>
+    @media (max-width: 768px) {
+        .main .block-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        .stButton > button {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        .stDataFrame {
+            font-size: 12px;
+        }
+    }
+    
+    /* Improve sidebar on mobile */
+    @media (max-width: 768px) {
+        .css-1d391kg {
+            width: 100%;
+        }
+    }
+    
+    /* Better spacing for mobile */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 st.title('Giao Dịch USDT')
 
 # Placeholders for status and progress
@@ -45,11 +83,20 @@ progress_bar_placeholder = st.empty()
 def get_all_pairs(exchange_name):
     try:
         exchange_class = getattr(ccxt, exchange_name)
-        exchange = exchange_class({
+        
+        # Optimize settings for working exchanges
+        config = {
             'enableRateLimit': True,
             'timeout': 30000,  # 30 seconds timeout
             'rateLimit': 1000,  # 1 second between requests
-        })
+        }
+        
+        # Add specific optimizations for working exchanges
+        if exchange_name in ['mexc', 'gate', 'okx']:
+            config['timeout'] = 20000  # Shorter timeout for reliable exchanges
+            config['rateLimit'] = 800   # Faster rate for reliable exchanges
+        
+        exchange = exchange_class(config)
         markets = exchange.load_markets()
         
         usdt_pairs = []
@@ -72,11 +119,20 @@ def get_all_pairs(exchange_name):
 def filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timeframe, doji_body_percentage, avg_volume_candles, doji_calculation_method):
     try:
         exchange_class = getattr(ccxt, exchange_name)
-        exchange = exchange_class({
+        
+        # Optimize settings for working exchanges
+        config = {
             'enableRateLimit': True,
             'timeout': 30000,  # 30 seconds timeout
             'rateLimit': 1000,  # 1 second between requests
-        })
+        }
+        
+        # Add specific optimizations for working exchanges
+        if exchange_name in ['mexc', 'gate', 'okx']:
+            config['timeout'] = 20000  # Shorter timeout for reliable exchanges
+            config['rateLimit'] = 800   # Faster rate for reliable exchanges
+        
+        exchange = exchange_class(config)
 
         # Fetch candles for Doji check and average volume
         # Fetch enough candles for both Doji check and average volume calculation
@@ -148,11 +204,20 @@ def filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timefr
 def get_candle_data(pair, exchange_name, timeframe, limit):
     try:
         exchange_class = getattr(ccxt, exchange_name)
-        exchange = exchange_class({
+        
+        # Optimize settings for working exchanges
+        config = {
             'enableRateLimit': True,
             'timeout': 30000,  # 30 seconds timeout
             'rateLimit': 1000,  # 1 second between requests
-        })
+        }
+        
+        # Add specific optimizations for working exchanges
+        if exchange_name in ['mexc', 'gate', 'okx']:
+            config['timeout'] = 20000  # Shorter timeout for reliable exchanges
+            config['rateLimit'] = 800   # Faster rate for reliable exchanges
+        
+        exchange = exchange_class(config)
         ohlcvs = exchange.fetch_ohlcv(pair, timeframe, limit=limit)
         df = pd.DataFrame(ohlcvs, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -209,7 +274,17 @@ exchanges = ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit'] # Using lowerca
 selected_exchanges = []
 
 # Add info about exchange status
-st.sidebar.markdown("*💡 MEXC và Gate thường hoạt động tốt nhất trên Streamlit Cloud*")
+st.sidebar.markdown("*💡 MEXC, Gate và OKX thường hoạt động tốt nhất trên Streamlit Cloud*")
+
+# Add exchange status indicators
+st.sidebar.markdown("**Trạng thái sàn:**")
+reliable_exchanges = ['mexc', 'gate', 'okx']
+for exchange_name in exchanges:
+    status_icon = "🟢" if exchange_name in reliable_exchanges else "🟡"
+    status_text = "Ổn định" if exchange_name in reliable_exchanges else "Có thể gặp vấn đề"
+    st.sidebar.markdown(f"{status_icon} {exchange_name.capitalize()}: {status_text}")
+
+st.sidebar.markdown("---")
 
 for exchange_name in exchanges:
     if st.sidebar.checkbox(exchange_name.capitalize(), value=False, disabled=st.session_state.filtering_in_progress, key=f"exchange_{exchange_name}"):
@@ -352,11 +427,20 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
                 if filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timeframe_value, doji_body_percentage, avg_volume_candles, doji_calculation_method):
                     try:
                         exchange_class = getattr(ccxt, exchange_name)
-                        exchange = exchange_class({
+                        
+                        # Optimize settings for working exchanges
+                        config = {
                             'enableRateLimit': True,
                             'timeout': 30000,  # 30 seconds timeout
                             'rateLimit': 1000,  # 1 second between requests
-                        })
+                        }
+                        
+                        # Add specific optimizations for working exchanges
+                        if exchange_name in ['mexc', 'gate', 'okx']:
+                            config['timeout'] = 20000  # Shorter timeout for reliable exchanges
+                            config['rateLimit'] = 800   # Faster rate for reliable exchanges
+                        
+                        exchange = exchange_class(config)
                         ticker = exchange.fetch_ticker(pair)
                         current_price = ticker['last']
                         high_price = ticker['high'] # Fetch high price
@@ -404,11 +488,23 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
         status_placeholder.empty() # Always clear status message
         progress_placeholder.empty() # Always clear progress bar
 
-# Main interface
-main_col1, main_col2 = st.columns([1, 1])
+# Main interface - responsive layout
+if st.session_state.filtering_in_progress:
+    # On mobile, stack buttons vertically
+    col1, col2 = st.columns([1, 1])
+else:
+    # On desktop, use side-by-side layout
+    col1, col2 = st.columns([1, 1])
 
-with main_col1:
+with col1:
     if st.button('Tìm kiếm cặp usdt phù hợp', disabled=st.session_state.filtering_in_progress or not selected_exchanges, use_container_width=True):
+        # Check if user selected reliable exchanges
+        reliable_exchanges = ['mexc', 'gate', 'okx']
+        selected_reliable = [ex for ex in selected_exchanges if ex in reliable_exchanges]
+        
+        if selected_exchanges and not selected_reliable:
+            st.warning("💡 Khuyến nghị: Chọn MEXC, Gate hoặc OKX để có kết quả tốt nhất!")
+        
         st.session_state.filtering_in_progress = True
         st.session_state.start_filtering_triggered = True
         st.session_state.stop_filtering = False # Reset stop signal
@@ -420,7 +516,7 @@ with main_col1:
         st.session_state.selected_pair_index = None # Clear selected index
         st.rerun()
 
-with main_col2:
+with col2:
     if st.session_state.filtering_in_progress:
         if st.button(
             'Dừng',
@@ -474,7 +570,8 @@ if not st.session_state.df_filtered_pairs.empty:
             "Link Sàn": st.column_config.LinkColumn("Link Sàn", display_text="Xem trực tiếp")
         },
         key="_df_filtered_pairs_selection", # Keep the key
-        on_select=handle_dataframe_select # Use the callback function
+        on_select=handle_dataframe_select, # Use the callback function
+        use_container_width=True  # Better for mobile
     )
 
 
