@@ -96,6 +96,15 @@ def get_all_pairs(exchange_name):
             config['timeout'] = 20000  # Shorter timeout for reliable exchanges
             config['rateLimit'] = 800   # Faster rate for reliable exchanges
         
+        # Special handling for Binance
+        if exchange_name == 'binance':
+            config['timeout'] = 45000  # Longer timeout for Binance
+            config['rateLimit'] = 1200  # Slower rate for Binance
+            config['options'] = {
+                'defaultType': 'spot',  # Force spot trading
+                'adjustForTimeDifference': True,
+            }
+        
         exchange = exchange_class(config)
         markets = exchange.load_markets()
         
@@ -105,13 +114,22 @@ def get_all_pairs(exchange_name):
                 usdt_pairs.append(symbol)
         return usdt_pairs
     except ccxt.NetworkError as e:
-        st.warning(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
+        if exchange_name == 'binance':
+            st.warning(f"⚠️ Binance có thể bị chặn hoặc rate limit. Lỗi: {e}")
+        else:
+            st.warning(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
         return []
     except ccxt.ExchangeError as e:
-        st.warning(f"Lỗi sàn giao dịch {exchange_name}: {e}")
+        if exchange_name == 'binance':
+            st.warning(f"⚠️ Binance API error: {e}")
+        else:
+            st.warning(f"Lỗi sàn giao dịch {exchange_name}: {e}")
         return []
     except Exception as e:
-        st.warning(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
+        if exchange_name == 'binance':
+            st.warning(f"⚠️ Binance không khả dụng: {e}")
+        else:
+            st.warning(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
         return []
 
 # Function to filter pairs based on Doji candle and volume
@@ -280,9 +298,21 @@ st.sidebar.markdown("*💡 MEXC, Gate và OKX thường hoạt động tốt nh�
 st.sidebar.markdown("**Trạng thái sàn:**")
 reliable_exchanges = ['mexc', 'gate', 'okx']
 for exchange_name in exchanges:
-    status_icon = "🟢" if exchange_name in reliable_exchanges else "🟡"
-    status_text = "Ổn định" if exchange_name in reliable_exchanges else "Có thể gặp vấn đề"
+    if exchange_name == 'binance':
+        status_icon = "🔴"
+        status_text = "Thường bị chặn"
+    elif exchange_name in reliable_exchanges:
+        status_icon = "🟢"
+        status_text = "Ổn định"
+    else:
+        status_icon = "🟡"
+        status_text = "Có thể gặp vấn đề"
     st.sidebar.markdown(f"{status_icon} {exchange_name.capitalize()}: {status_text}")
+
+# Add specific note about Binance
+st.sidebar.markdown("---")
+st.sidebar.markdown("**💡 Lưu ý:**")
+st.sidebar.markdown("*Binance thường bị chặn ở nhiều khu vực. Nếu không hoạt động, hãy thử MEXC, Gate hoặc OKX.*")
 
 st.sidebar.markdown("---")
 
@@ -504,6 +534,10 @@ with col1:
         
         if selected_exchanges and not selected_reliable:
             st.warning("💡 Khuyến nghị: Chọn MEXC, Gate hoặc OKX để có kết quả tốt nhất!")
+        
+        # Special warning for Binance
+        if 'binance' in selected_exchanges:
+            st.info("⚠️ Binance có thể không hoạt động do bị chặn hoặc rate limit. Nếu gặp lỗi, hãy thử MEXC, Gate hoặc OKX.")
         
         st.session_state.filtering_in_progress = True
         st.session_state.start_filtering_triggered = True

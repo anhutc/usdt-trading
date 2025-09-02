@@ -24,15 +24,16 @@ Khi triển khai trên Streamlit Cloud, một số sàn giao dịch có thể kh
 - **OKX** - Hoạt động tốt trên Streamlit Cloud
 
 ### Sàn có thể gặp vấn đề:
-- **Binance** - Có thể bị chặn hoặc rate limit
+- **Binance** - Thường bị chặn hoặc rate limit nghiêm ngặt ở nhiều khu vực
 - **Huobi** - Có thể bị chặn ở một số khu vực
 - **Bybit** - Đôi khi gặp vấn đề kết nối
 
 ### Giải pháp:
 1. Chỉ chọn MEXC, Gate và OKX để có kết quả tốt nhất
-2. Thử lại sau vài phút nếu gặp lỗi
-3. Kiểm tra kết nối internet
-4. Sử dụng VPN nếu cần thiết
+2. Binance thường không hoạt động trên cloud platforms - đây là bình thường
+3. Thử lại sau vài phút nếu gặp lỗi
+4. Kiểm tra kết nối internet
+5. Sử dụng VPN nếu cần thiết
 
 ## Tính năng
 
