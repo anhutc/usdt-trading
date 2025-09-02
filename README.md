@@ -1,84 +1,84 @@
-# USDT Trading Bot
+# Ứng dụng Giao Dịch USDT
 
-This Streamlit application helps users identify potential trading opportunities for USDT pairs across multiple cryptocurrency exchanges by filtering for "Doji" candlesticks with high trading volume.
+Ứng dụng Streamlit này giúp người dùng xác định các cơ hội giao dịch tiềm năng cho các cặp USDT trên nhiều sàn giao dịch tiền điện tử bằng cách lọc các nến "Doji" có khối lượng giao dịch cao.
 
-## Features
+## Tính năng
 
-*   **Multi-Exchange Support:** Connects to Binance, OKX, Huobi, Gate, MEXC, and Bybit.
-*   **Doji Candle Detection:** Identifies Doji-like candlesticks based on user-defined criteria.
-*   **High Volume Filtering:** Filters pairs where the Doji candle's volume exceeds the average volume.
-*   **Token Exclusion:** Option to exclude leverage tokens (UP/DOWN/BULL/BEAR) and futures tokens (PERP/FUTURES).
-*   **Interactive Charts:** Visualize candlestick data, volatility, and Simple Moving Averages (SMAs) for selected pairs.
-*   **Responsive UI:** User-friendly interface optimized for various screen sizes.
+*   **Hỗ trợ đa sàn giao dịch:** Kết nối với Binance, OKX, Huobi, Gate, MEXC và Bybit.
+*   **Phát hiện nến Doji:** Xác định các nến giống Doji dựa trên tiêu chí do người dùng định nghĩa.
+*   **Lọc theo khối lượng cao:** Lọc các cặp mà khối lượng của nến Doji vượt quá khối lượng trung bình.
+*   **Loại trừ token:** Tùy chọn loại trừ các token đòn bẩy (UP/DOWN/BULL/BEAR) và token hợp đồng tương lai (PERP/FUTURES).
+*   **Biểu đồ tương tác:** Trực quan hóa dữ liệu nến, độ biến động và các đường trung bình động đơn giản (SMA 7, SMA 25, SMA 99) cho các cặp được chọn.
+*   **Giao diện người dùng đáp ứng:** Giao diện thân thiện với người dùng được tối ưu hóa cho nhiều kích thước màn hình.
 
-## How to Use
+## Cách sử dụng
 
-### 1. Prerequisites
+### 1. Điều kiện tiên quyết
 
 *   Python 3.7+
-*   `pip` (Python package installer)
+*   `pip` (Trình cài đặt gói Python)
 
-### 2. Installation
+### 2. Cài đặt
 
-1.  **Clone the repository:**
+1.  **Sao chép kho lưu trữ:**
     ```bash
     git clone https://github.com/your-username/usdt-trading.git
     cd usdt-trading
     ```
-2.  **Create a virtual environment (recommended):**
+2.  **Tạo môi trường ảo (khuyến nghị):**
     ```bash
     python -m venv venv
-    venv\Scripts\activate  # On Windows
-    source venv/bin/activate # On macOS/Linux
+    venv\Scripts\activate  # Trên Windows
+    source venv/bin/activate # Trên macOS/Linux
     ```
-3.  **Install dependencies:**
+3.  **Cài đặt các phụ thuộc:**
     ```bash
     pip install -r requirements.txt
     ```
 
-### 3. Running the Application
+### 3. Chạy ứng dụng
 
-To run the Streamlit application, execute the following command in your terminal:
+Để chạy ứng dụng Streamlit, thực thi lệnh sau trong terminal của bạn:
 
 ```bash
 streamlit run app.py
 ```
 
-The application will open in your web browser, typically at `http://localhost:8501`.
+Ứng dụng sẽ mở trong trình duyệt web của bạn, thường là tại `http://localhost:8501`.
 
-### 4. Application Interface
+### 4. Giao diện ứng dụng
 
-The application interface consists of a sidebar for filters and a main area for displaying results and charts.
+Giao diện ứng dụng bao gồm một thanh bên cho các bộ lọc và một khu vực chính để hiển thị kết quả và biểu đồ.
 
-#### Sidebar Options:
+#### Tùy chọn thanh bên:
 
-*   **Giới hạn kết quả (Max Results):** Set a limit on the number of pairs to display. Enter `0` for no limit.
-*   **Sàn giao dịch (Exchanges):** Select the cryptocurrency exchanges you want to search on.
+*   **Giới hạn kết quả (Max Results):** Đặt giới hạn số lượng cặp hiển thị. Nhập `0` để không giới hạn.
+*   **Sàn giao dịch (Exchanges):** Chọn các sàn giao dịch tiền điện tử bạn muốn tìm kiếm.
 *   **Loại trừ (Exclusion):**
-    *   **Token đòn bẩy (Leverage Tokens):** Exclude tokens like UP/DOWN/BULL/BEAR.
-    *   **Hợp đồng tương lai (Futures Tokens):** Exclude tokens like PERP/FUTURES.
+    *   **Token đòn bẩy (Leverage Tokens):** Loại trừ các token như UP/DOWN/BULL/BEAR.
+    *   **Hợp đồng tương lai (Futures Tokens):** Loại trừ các token như PERP/FUTURES.
 *   **Tùy chỉnh Doji & Volume (Doji & Volume Customization):**
-    *   **Số nến gần nhất để kiểm tra Doji (Number of recent candles for Doji check):** Define how many recent candles to analyze for Doji patterns.
-    *   **Khung thời gian nến Doji (Doji Candle Timeframe):** Select the timeframe for the candles (e.g., 1 phút, 1 ngày, 3 ngày).
-    *   **Cách tính tỷ lệ thân nến Doji (Doji body percentage calculation method):** Choose between 'Theo biên độ nến' (By candle range) or 'Theo giá mở' (By open price).
-    *   **Tỷ lệ thân nến Doji tối đa (%):** Set the maximum percentage for the Doji candle body.
-    *   **Số nến tính Volume trung bình (Number of candles for average Volume):** Define the period for calculating average volume.
+    *   **Số nến gần nhất để kiểm tra Doji (Number of recent candles for Doji check):** Xác định số lượng nến gần đây để phân tích mẫu Doji.
+    *   **Khung thời gian nến Doji (Doji Candle Timeframe):** Chọn khung thời gian cho nến (ví dụ: 1 phút, 1 ngày, 3 ngày).
+    *   **Cách tính tỷ lệ thân nến Doji (Doji body percentage calculation method):** Chọn giữa 'Theo biên độ nến' hoặc 'Theo giá mở'.
+    *   **Tỷ lệ thân nến Doji tối đa (%):** Đặt tỷ lệ phần trăm tối đa cho thân nến Doji.
+    *   **Số nến tính Volume trung bình (Number of candles for average Volume):** Xác định khoảng thời gian để tính khối lượng trung bình.
 
-#### Main Area:
+#### Khu vực chính:
 
-*   **Tìm kiếm cặp usdt phù hợp (Search for suitable USDT pairs):** Click this button to start the filtering process.
-*   **Dừng (Stop):** Stop the ongoing filtering process.
-*   **Filtered Pairs Table:** Displays the list of USDT pairs that meet your criteria, including the exchange, pair name, current price, high, low, and a direct link to the trading page on the exchange.
-*   **Detailed Chart:** When you select a pair from the table, a detailed candlestick chart will appear, showing price action, volume, and various moving averages (SMA 7, SMA 25, SMA 99). You can select different timeframes for the chart.
+*   **Tìm kiếm cặp usdt phù hợp (Search for suitable USDT pairs):** Nhấp vào nút này để bắt đầu quá trình lọc.
+*   **Dừng (Stop):** Dừng quá trình lọc đang diễn ra.
+*   **Bảng các cặp đã lọc:** Hiển thị danh sách các cặp USDT đáp ứng tiêu chí của bạn, bao gồm sàn giao dịch, tên cặp, giá hiện tại, giá cao, giá thấp và liên kết trực tiếp đến trang giao dịch trên sàn.
+*   **Biểu đồ chi tiết:** Khi bạn chọn một cặp từ bảng, biểu đồ nến chi tiết sẽ xuất hiện, hiển thị hành động giá, khối lượng và các đường trung bình động khác nhau (SMA 7, SMA 25, SMA 99). Bạn có thể chọn các khung thời gian khác nhau cho biểu đồ.
 
-## Deployment on Heroku
+## Triển khai trên Heroku
 
-The application is designed to be deployable on Heroku. The `Dockerfile` and `Procfile` are included for this purpose.
+Ứng dụng được thiết kế để có thể triển khai trên Heroku. Các tệp `Dockerfile` và `Procfile` được bao gồm cho mục đích này.
 
-## Contributing
+## Đóng góp
 
-Feel free to fork the repository, make improvements, and submit pull requests.
+Bạn có thể tự do sao chép kho lưu trữ, thực hiện cải tiến và gửi yêu cầu kéo (pull request).
 
-## License
+## Giấy phép
 
-This project is open source and available under the MIT License.
+Dự án này là mã nguồn mở và có sẵn theo Giấy phép MIT.
