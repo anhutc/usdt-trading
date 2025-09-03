@@ -8,6 +8,10 @@ import altair as alt
 import concurrent.futures
 import os # Import the os module
 import time # Import the time module for delays
+import logging # Import the logging module
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Configuration ---
 
@@ -116,11 +120,11 @@ def _fetch_binance_data_direct(endpoint, params=None):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         url = f"https://api.binance.com/api/v3/{endpoint}"
-        st.write(f"Đang yêu cầu Binance API: {url} với tham số {params}") # Thêm log
+        logging.info(f"Đang yêu cầu Binance API: {url} với tham số {params}") # Thay thế st.write bằng logging.info
         response = requests.get(url, params=params, headers=headers, timeout=30)
         response.raise_for_status()  # Raise an exception for HTTP errors
         data = response.json()
-        st.write(f"Phản hồi từ Binance API: {data[:200]}...") # Log phản hồi (chỉ một phần)
+        logging.info(f"Phản hồi từ Binance API (rút gọn): {str(data)[:200]}...") # Thay thế st.write bằng logging.info
         return data
     except requests.exceptions.RequestException as e:
         st.warning(f"Lỗi khi lấy dữ liệu từ Binance API trực tiếp: {e}")
