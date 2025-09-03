@@ -126,8 +126,11 @@ def _fetch_binance_data_direct(endpoint, params=None):
         data = response.json()
         logging.info(f"Phản hồi từ Binance API (rút gọn): {str(data)[:200]}...") # Thay thế st.write bằng logging.info
         return data
+    except requests.exceptions.JSONDecodeError as e:
+        logging.error(f"Lỗi phân tích JSON từ Binance API: {e}. Phản hồi thô: {response.text[:200]}...")
+        return None
     except requests.exceptions.RequestException as e:
-        st.warning(f"Lỗi khi lấy dữ liệu từ Binance API trực tiếp: {e}")
+        logging.error(f"Lỗi khi lấy dữ liệu từ Binance API trực tiếp: {e}") # Thay thế st.warning
         return None
 
 # Function to fetch all USDT pairs from an exchange
