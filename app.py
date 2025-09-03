@@ -144,7 +144,7 @@ def get_all_pairs(exchange_name):
                 return usdt_pairs
             return []
         except Exception as e:
-            st.warning(f"Lỗi khi lấy tất cả các cặp Binance trực tiếp: {e}")
+            logging.error(f"Lỗi khi lấy tất cả các cặp Binance trực tiếp: {e}") # Thay thế st.warning
             return []
     else:
         try:
@@ -158,19 +158,19 @@ def get_all_pairs(exchange_name):
             return usdt_pairs
         except ccxt.NetworkError as e:
             if exchange_name == 'binance' and is_heroku_deployment:
-                st.warning(f"⚠️ Binance có thể bị chặn hoặc rate limit. Lỗi: {e}")
+                logging.error(f"⚠️ Binance có thể bị chặn hoặc rate limit. Lỗi: {e}") # Thay thế st.warning
             else:
                 st.warning(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
             return []
         except ccxt.ExchangeError as e:
             if exchange_name == 'binance' and is_heroku_deployment:
-                st.warning(f"⚠️ Binance API error: {e}")
+                logging.error(f"⚠️ Binance API error: {e}") # Thay thế st.warning
             else:
                 st.warning(f"Lỗi sàn giao dịch {exchange_name}: {e}")
             return []
         except Exception as e:
             if exchange_name == 'binance' and is_heroku_deployment:
-                st.warning(f"⚠️ Binance không khả dụng: {e}")
+                logging.error(f"⚠️ Binance không khả dụng: {e}") # Thay thế st.warning
             else:
                 st.warning(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
             return []
@@ -254,11 +254,14 @@ def filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timefr
                 return True
         return False
 
-    except ccxt.NetworkError:
+    except ccxt.NetworkError as e: # Catch the specific exception
+        logging.error(f"Lỗi mạng khi kiểm tra Doji/Volume cho {pair} trên {exchange_name}: {e}") # Thay thế st.warning
         return False
-    except ccxt.ExchangeError:
+    except ccxt.ExchangeError as e: # Catch the specific exception
+        logging.error(f"Lỗi sàn giao dịch khi kiểm tra Doji/Volume cho {pair} trên {exchange_name}: {e}") # Thay thế st.warning
         return False
-    except Exception:
+    except Exception as e:
+        logging.error(f"Đã xảy ra lỗi không mong muốn khi kiểm tra Doji/Volume cho {pair} trên {exchange_name}: {e}") # Thay thế st.warning
         return False
 
 # Function to fetch candlestick data
@@ -280,7 +283,7 @@ def get_candle_data(pair, exchange_name, timeframe, limit):
                 return df
             return pd.DataFrame()
         except Exception as e:
-            st.warning(f"Không thể lấy dữ liệu nến cho {pair} trên Binance (trực tiếp): {e}")
+            logging.error(f"Không thể lấy dữ liệu nến cho {pair} trên Binance (trực tiếp): {e}") # Thay thế st.warning
             return pd.DataFrame()
     else:
         try:
@@ -290,7 +293,7 @@ def get_candle_data(pair, exchange_name, timeframe, limit):
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
             return df
         except Exception as e:
-            st.warning(f"Không thể lấy dữ liệu nến cho {pair} trên {exchange_name}: {e}")
+            logging.error(f"Không thể lấy dữ liệu nến cho {pair} trên {exchange_name}: {e}") # Thay thế st.warning
             return pd.DataFrame()
 
 # Function to calculate Simple Moving Average (SMA)
