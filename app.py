@@ -499,25 +499,36 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
                 # Check for Doji and Volume condition
                 if filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timeframe_value, doji_body_percentage, avg_volume_candles, doji_calculation_method):
                     try:
-                        exchange_class = getattr(ccxt, exchange_name)
+                        if exchange_name == 'binance':
+                            binance_symbol_ticker = pair.replace('/', '')
+                            ticker_data = _fetch_binance_data_direct('ticker/24hr', {'symbol': binance_symbol_ticker})
+                            if ticker_data:
+                                current_price = float(ticker_data['lastPrice'])
+                                high_price = float(ticker_data['highPrice'])
+                                low_price = float(ticker_data['lowPrice'])
+                            else:
+                                raise Exception("Không thể lấy dữ liệu ticker từ Binance trực tiếp")
+                        else:
+                            exchange_class = getattr(ccxt, exchange_name)
+                            
+                            # Optimize settings for working exchanges
+                            config = {
+                                'enableRateLimit': True,
+                                'timeout': 30000,  # 30 seconds timeout
+                                'rateLimit': 1000,  # 1 second between requests
+                            }
+                            
+                            # Add specific optimizations for working exchanges
+                            if exchange_name in ['mexc', 'gate', 'okx']:
+                                config['timeout'] = 20000  # Shorter timeout for reliable exchanges
+                                config['rateLimit'] = 800   # Faster rate for reliable exchanges
+                            
+                            exchange = exchange_class(config)
+                            ticker = exchange.fetch_ticker(pair)
+                            current_price = ticker['last']
+                            high_price = ticker['high'] # Fetch high price
+                            low_price = ticker['low']   # Fetch low price
                         
-                        # Optimize settings for working exchanges
-                        config = {
-                            'enableRateLimit': True,
-                            'timeout': 30000,  # 30 seconds timeout
-                            'rateLimit': 1000,  # 1 second between requests
-                        }
-                        
-                        # Add specific optimizations for working exchanges
-                        if exchange_name in ['mexc', 'gate', 'okx']:
-                            config['timeout'] = 20000  # Shorter timeout for reliable exchanges
-                            config['rateLimit'] = 800   # Faster rate for reliable exchanges
-                        
-                        exchange = exchange_class(config)
-                        ticker = exchange.fetch_ticker(pair)
-                        current_price = ticker['last']
-                        high_price = ticker['high'] # Fetch high price
-                        low_price = ticker['low']   # Fetch low price
                         st.session_state.current_filtered_pairs_list.append({
                             'Sàn giao dịch': exchange_name.capitalize(),
                             'Cặp usdt': pair,
