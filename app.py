@@ -7,6 +7,7 @@ import numpy as np
 import altair as alt
 import concurrent.futures
 import os # Import the os module
+import time # Import the time module for delays
 
 # --- Configuration ---
 
@@ -115,9 +116,12 @@ def _fetch_binance_data_direct(endpoint, params=None):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         url = f"https://api.binance.com/api/v3/{endpoint}"
+        st.write(f"Đang yêu cầu Binance API: {url} với tham số {params}") # Thêm log
         response = requests.get(url, params=params, headers=headers, timeout=30)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        return response.json()
+        data = response.json()
+        st.write(f"Phản hồi từ Binance API: {data[:200]}...") # Log phản hồi (chỉ một phần)
+        return data
     except requests.exceptions.RequestException as e:
         st.warning(f"Lỗi khi lấy dữ liệu từ Binance API trực tiếp: {e}")
         return None
@@ -492,6 +496,8 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
                     status_placeholder.warning("Quá trình tìm kiếm đã dừng.")
                     break
 
+                time.sleep(0.05) # Add a small delay for each pair to prevent rate limiting issues.
+                
                 # Update progress for each pair
                 # The total progress now starts after initial fetching is done.
                 # We need to refine the progress calculation for the second phase.
@@ -547,6 +553,7 @@ def perform_filtering(selected_exchanges, exclude_leverage_tokens, exclude_futur
                     except Exception as e:
                         pass # Ignore errors for individual price fetches
             current_exchange_idx += 1 # Increment after processing all pairs for the current exchange
+            time.sleep(0.1) # Add a small delay between exchange processing to prevent rate limiting
         
         my_bar.progress(1.0, text="Hoàn thành!") # Ensure progress bar reaches 1.0 (100%) at the end
         
