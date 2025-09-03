@@ -1,3 +1,4 @@
+import requests # Import the requests module
 import streamlit as st
 import pandas as pd
 import ccxt
@@ -106,45 +107,88 @@ def get_exchange_object(exchange_name):
         }
     return exchange_class(config)
 
+# Function to fetch data directly from Binance API
+@st.cache_data(ttl=3600) # Cache for 1 hour
+def _fetch_binance_data_direct(endpoint, params=None):
+    try:
+        url = f"https://api.binance.com/api/v3/{endpoint}"
+        response = requests.get(url, params=params, timeout=30)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.warning(f"Lỗi khi lấy dữ liệu từ Binance API trực tiếp: {e}")
+        return None
+
 # Function to fetch all USDT pairs from an exchange
 @st.cache_data(ttl=3600) # Cache for 1 hour
 def get_all_pairs(exchange_name):
-    try:
-        exchange = get_exchange_object(exchange_name)
-        markets = exchange.load_markets()
-        
-        usdt_pairs = []
-        for symbol in markets:
-            if symbol.endswith('/USDT'):
-                usdt_pairs.append(symbol)
-        return usdt_pairs
-    except ccxt.NetworkError as e:
-        if exchange_name == 'binance' and is_heroku_deployment:
-            st.warning(f"⚠️ Binance có thể bị chặn hoặc rate limit. Lỗi: {e}")
-        else:
-            st.warning(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
-        return []
-    except ccxt.ExchangeError as e:
-        if exchange_name == 'binance' and is_heroku_deployment:
-            st.warning(f"⚠️ Binance API error: {e}")
-        else:
-            st.warning(f"Lỗi sàn giao dịch {exchange_name}: {e}")
-        return []
-    except Exception as e:
-        if exchange_name == 'binance' and is_heroku_deployment:
-            st.warning(f"⚠️ Binance không khả dụng: {e}")
-        else:
-            st.warning(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
-        return []
+    if exchange_name == 'binance':
+        try:
+            exchange_info = _fetch_binance_data_direct('exchangeInfo')
+            if exchange_info:
+                usdt_pairs = []
+                for symbol_info in exchange_info['symbols']:
+                    if symbol_info['quoteAsset'] == 'USDT' and symbol_info['status'] == 'TRADING':
+                        usdt_pairs.append(f"{symbol_info['baseAsset']}/{symbol_info['quoteAsset']}")
+                return usdt_pairs
+            return []
+        except Exception as e:
+            st.warning(f"Lỗi khi lấy tất cả các cặp Binance trực tiếp: {e}")
+            return []
+    else:
+        try:
+            exchange = get_exchange_object(exchange_name)
+            markets = exchange.load_markets()
+            
+            usdt_pairs = []
+            for symbol in markets:
+                if symbol.endswith('/USDT'):
+                    usdt_pairs.append(symbol)
+            return usdt_pairs
+        except ccxt.NetworkError as e:
+            if exchange_name == 'binance' and is_heroku_deployment:
+                st.warning(f"⚠️ Binance có thể bị chặn hoặc rate limit. Lỗi: {e}")
+            else:
+                st.warning(f"Lỗi mạng khi kết nối với {exchange_name}: {e}")
+            return []
+        except ccxt.ExchangeError as e:
+            if exchange_name == 'binance' and is_heroku_deployment:
+                st.warning(f"⚠️ Binance API error: {e}")
+            else:
+                st.warning(f"Lỗi sàn giao dịch {exchange_name}: {e}")
+            return []
+        except Exception as e:
+            if exchange_name == 'binance' and is_heroku_deployment:
+                st.warning(f"⚠️ Binance không khả dụng: {e}")
+            else:
+                st.warning(f"Đã xảy ra lỗi không mong muốn với {exchange_name}: {e}")
+            return []
 
 def filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timeframe, doji_body_percentage, avg_volume_candles, doji_calculation_method):
     try:
-        exchange = get_exchange_object(exchange_name)
+        ohlcvs = []
+        if exchange_name == 'binance':
+            binance_symbol = pair.replace('/', '')
+            interval_map = {
+                '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+                '1h': '1h', '4h': '4h', '1d': '1d', '3d': '3d', '1w': '1w'
+            }
+            binance_interval = interval_map.get(doji_candle_timeframe, '1d')
+            limit_candles = max(num_doji_candles, avg_volume_candles)
+            
+            # Try 3d first, then fallback to 1d
+            data = _fetch_binance_data_direct('klines', {'symbol': binance_symbol, 'interval': '3d', 'limit': limit_candles})
+            if not data or len(data) == 0:
+                data = _fetch_binance_data_direct('klines', {'symbol': binance_symbol, 'interval': '1d', 'limit': limit_candles * 3}) # Fetch more for 1d to simulate 3d if needed
 
-        # Fetch candles for Doji check and average volume
-        # Fetch enough candles for both Doji check and average volume calculation
-        limit_candles = max(num_doji_candles, avg_volume_candles)
-        ohlcvs = exchange.fetch_ohlcv(pair, doji_candle_timeframe, limit=limit_candles)
+            if data:
+                # Convert Binance klines format to desired OHLCV format
+                ohlcvs = [[int(k[0]), float(k[1]), float(k[2]), float(k[3]), float(k[4]), float(k[5])] for k in data]
+            
+        else:
+            exchange = get_exchange_object(exchange_name)
+            limit_candles = max(num_doji_candles, avg_volume_candles)
+            ohlcvs = exchange.fetch_ohlcv(pair, doji_candle_timeframe, limit=limit_candles)
         
         if not ohlcvs or len(ohlcvs) < limit_candles:
             return False
@@ -209,15 +253,34 @@ def filter_doji_volume(pair, exchange_name, num_doji_candles, doji_candle_timefr
 # Function to fetch candlestick data
 @st.cache_data(ttl=600) # Cache for 10 minutes
 def get_candle_data(pair, exchange_name, timeframe, limit):
-    try:
-        exchange = get_exchange_object(exchange_name)
-        ohlcvs = exchange.fetch_ohlcv(pair, timeframe, limit=limit)
-        df = pd.DataFrame(ohlcvs, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        return df
-    except Exception as e:
-        st.warning(f"Không thể lấy dữ liệu nến cho {pair} trên {exchange_name}: {e}")
-        return pd.DataFrame()
+    if exchange_name == 'binance':
+        try:
+            binance_symbol = pair.replace('/', '')
+            interval_map = {
+                "1s": "1s", "15m": "15m", "1h": "1h", "4h": "4h",
+                "1d": "1d", "3d": "3d", "1w": "1w"
+            }
+            binance_interval = interval_map.get(timeframe, '1d')
+            data = _fetch_binance_data_direct('klines', {'symbol': binance_symbol, 'interval': binance_interval, 'limit': limit})
+            if data:
+                ohlcvs = [[int(k[0]), float(k[1]), float(k[2]), float(k[3]), float(k[4]), float(k[5])] for k in data]
+                df = pd.DataFrame(ohlcvs, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+                return df
+            return pd.DataFrame()
+        except Exception as e:
+            st.warning(f"Không thể lấy dữ liệu nến cho {pair} trên Binance (trực tiếp): {e}")
+            return pd.DataFrame()
+    else:
+        try:
+            exchange = get_exchange_object(exchange_name)
+            ohlcvs = exchange.fetch_ohlcv(pair, timeframe, limit=limit)
+            df = pd.DataFrame(ohlcvs, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+            df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+            return df
+        except Exception as e:
+            st.warning(f"Không thể lấy dữ liệu nến cho {pair} trên {exchange_name}: {e}")
+            return pd.DataFrame()
 
 # Function to calculate Simple Moving Average (SMA)
 def calculate_sma(df, window):
