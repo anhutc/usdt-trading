@@ -111,8 +111,11 @@ def get_exchange_object(exchange_name):
 @st.cache_data(ttl=3600) # Cache for 1 hour
 def _fetch_binance_data_direct(endpoint, params=None):
     try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
         url = f"https://api.binance.com/api/v3/{endpoint}"
-        response = requests.get(url, params=params, timeout=30)
+        response = requests.get(url, params=params, headers=headers, timeout=30)
         response.raise_for_status()  # Raise an exception for HTTP errors
         return response.json()
     except requests.exceptions.RequestException as e:
