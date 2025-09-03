@@ -119,7 +119,8 @@ def _fetch_binance_data_direct(endpoint, params=None):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
-        url = f"https://api.binance.com/api/v3/{endpoint}"
+        # Use https://data.binance.com for public market data to avoid 451 error on Heroku
+        url = f"https://data.binance.com/api/v3/{endpoint}" # Modified from api.binance.com
         logging.info(f"Đang yêu cầu Binance API: {url} với tham số {params}") # Thay thế st.write bằng logging.info
         response = requests.get(url, params=params, headers=headers, timeout=30)
         response.raise_for_status()  # Raise an exception for HTTP errors
