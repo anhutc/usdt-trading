@@ -1679,10 +1679,6 @@ class USDTTradingPortable {
     async fetchWithFallback(url, exchangeId = null) { // Xóa fallbackData
         let finalUrl = url;
         // Apply CORS proxy for specific exchanges if needed
-        if ((exchangeId === 'gate' || exchangeId === 'mexc') && !url.startsWith('https://api.allorigins.win')) {
-            finalUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            console.log(`[DEBUG] Using CORS proxy for ${exchangeId}: ${finalUrl}`);
-        }
 
         try {
             // Thử gọi API trực tiếp trước
