@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USDT Trading</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="filter-panel" id="filterPanel">
+            <div class="filter-title">Bộ Lọc</div>
+
+            <div class="filter-group">
+                <label for="maxResults">Giới hạn kết quả (0: không giới hạn):</label>
+                <input type="number" id="maxResults" class="input-field" value="0" min="0" max="500">
+            </div>
+
+            <div class="exchange-section">
+                <div class="exchange-item" id="binance-item">
+                    <input type="checkbox" class="exchange-checkbox" id="binance">
+                    <span class="exchange-name">Binance</span>
+                    <select class="candle-interval-select" id="binanceCandleInterval" disabled>
+                        <!-- Options will be dynamically populated -->
+                    </select>
+                </div>
+                <div class="exchange-item" id="okx-item">
+                    <input type="checkbox" class="exchange-checkbox" id="okx">
+                    <span class="exchange-name">OKX</span>
+                    <select class="candle-interval-select" id="okxCandleInterval" disabled>
+                        <!-- Options will be dynamically populated -->
+                    </select>
+                </div>
+                <div class="exchange-item" id="huobi-item">
+                    <input type="checkbox" class="exchange-checkbox" id="huobi">
+                    <span class="exchange-name">Huobi</span>
+                    <select class="candle-interval-select" id="huobiCandleInterval" disabled>
+                        <!-- Options will be dynamically populated -->
+                    </select>
+                </div>
+                <div class="exchange-item" id="gate-item">
+                    <input type="checkbox" class="exchange-checkbox" id="gate">
+                    <span class="exchange-name">Gate</span>
+                    <select class="candle-interval-select" id="gateCandleInterval" disabled>
+                        <!-- Options will be dynamically populated -->
+                    </select>
+                </div>
+                <div class="exchange-item" id="mexc-item">
+                    <input type="checkbox" class="exchange-checkbox" id="mexc">
+                    <span class="exchange-name">MEXC</span>
+                    <select class="candle-interval-select" id="mexcCandleInterval" disabled>
+                        <!-- Options will be dynamically populated -->
+                    </select>
+                </div>
+                <div class="exchange-item" id="bybit-item">
+                    <input type="checkbox" class="exchange-checkbox" id="bybit">
+                    <span class="exchange-name">Bybit</span>
+                    <select class="candle-interval-select" id="bybitCandleInterval" disabled>
+                        <!-- Options will be dynamically populated -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
+                <label for="numberOfCandles">Số lượng nến:</label>
+                <input type="number" id="numberOfCandles" class="input-field" value="6" min="1">
+            </div>
+            <div class="filter-group">
+                <label for="volumePeriods">Chu kỳ trung bình khối lượng:</label>
+                <input type="number" id="volumePeriods" class="input-field" value="20" min="1" max="100">
+            </div>
+
+            <div class="exclusion-section">
+                <div class="exclusion-item">
+                    <input type="checkbox" class="exclusion-checkbox" id="excludeLeveraged" checked>
+                    <span>Loại trừ Token Đòn bẩy</span>
+                </div>
+                <div class="exclusion-item">
+                    <input type="checkbox" class="exclusion-checkbox" id="excludeFutures" checked>
+                    <span>Loại trừ Futures</span>
+                </div>
+            </div>
+
+            <div class="candle-section">
+                <div class="candle-title">Điều Kiện Nến</div>
+                
+                <div class="condition-radio-group">
+                    <div class="radio-item">
+                        <input type="radio" class="radio-input" id="condition1" name="candleCondition" value="body" checked>
+                        <div>
+                            <label class="radio-label" for="condition1">Điều kiện 1: Thân nến < (N)%</label>
+                            <div class="radio-description">|Giá đóng - Giá mở| / (Giá trần - Giá sàn)</div>
+                        </div>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" class="radio-input" id="condition2" name="candleCondition" value="priceChange">
+                        <div>
+                            <label class="radio-label" for="condition2">Điều kiện 2: Thay đổi giá < (N)%</label>
+                            <div class="radio-description">|Giá đóng - Giá mở| / Giá mở</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="conditionValue">Giá trị điều kiện (N):</label>
+                    <input type="number" class="input-field" id="conditionValue" value="15" min="1" max="100" step="0.1">
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="scan-button" id="scanButton">Bắt đầu quét</button>
+            </div>
+        </div>
+
+        <div class="results-area" id="resultsArea">
+            <!-- Initial Content - displayed when no scan is active -->
+            <div id="initialContent" class="initial-display">
+                <h2>Chào mừng bạn đến với USDT Trading!</h2>
+                <p>Công cụ này giúp bạn tìm kiếm các cặp giao dịch tiềm năng trên nhiều sàn tiền điện tử dựa trên các điều kiện nến và khối lượng tùy chỉnh.</p>
+                <p>Chọn các sàn giao dịch, thiết lập điều kiện của bạn ở bảng điều khiển bên trái, và nhấn "Bắt đầu quét" để tìm các cơ hội giao dịch mới!</p>
+            </div>
+
+            <div class="loading hidden" id="loading">
+                <h2>🔍 Đang quét thị trường...</h2>
+                <p>Vui lòng chờ trong khi chúng tôi phân tích dữ liệu...</p>
+                
+                <!-- Progress Container -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-header">
+                        <div class="progress-title">Tiến trình quét</div>
+                        <div class="progress-status" id="progressStatus">Chuẩn bị...</div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                        <!-- <div class="progress-text" id="progressText">0%</div> -->
+                    </div>
+                    
+                    <div class="progress-details" id="progressDetails">
+                        <!-- Progress items will be added here -->
+                    </div>
+                </div>
+            </div>
+            
+            <h2 id="resultsTitle" class="hidden">📊 Kết quả quét thị trường</h2>
+            <table class="results-table hidden" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Sàn</th>
+                        <th>Cặp</th>
+                        <th>Giá hiện tại</th>
+                        <th>Giá cao nhất</th>
+                        <th>Giá thấp nhất</th>
+                        <th>Thay đổi 24h</th>
+                        <th>Xem trực tiếp</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody">
+                </tbody>
+            </table>
+
+            <!-- New Error Message Container -->
+            <div id="errorMessageContainer" class="error-message hidden">
+                <h3>⚠️ Đã xảy ra lỗi trong quá trình quét!</h3>
+                <p id="errorMessageDetail">Vui lòng kiểm tra kết nối internet hoặc thử lại sau.</p>
+            </div>
+
+            <div class="copyright-info">
+                <p>&copy; <span id="currentYear">1999</span> USDT Trading. All rights reserved. | Phát triển bởi bạn.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart Modal -->
+    <div class="chart-modal" id="chartModal">
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title" id="chartTitle">Biểu đồ nến</div>
+                <button class="close-chart" id="closeChart">✕</button>
+            </div>
+            
+            <div class="chart-info" id="chartInfo">
+                <span>Giá hiện tại: <span id="chartCurrentPrice">--</span></span>
+                <span>Mở: <span id="chartOpen">--</span></span>
+                <span>Cao: <span id="chartHigh">--</span></span>
+                <span>Thấp: <span id="chartLow">--</span></span>
+                <span>Đóng: <span id="chartClose">--</span></span>
+                <span>Biến động: <span id="chartChange">--</span></span>
+                <span>Biên độ: <span id="chartRange">--</span></span>
+                <span>MA(7): <span id="chartSma7">--</span></span>
+                <span>MA(25): <span id="chartSma25">--</span></span>
+                <span>MA(99): <span id="chartSma99">--</span></span>
+                <span>Vol (<span id="chartBaseAsset">--</span>): <span id="chartVolumeBase">--</span></span>
+                <span>Vol (USDT): <span id="chartVolumeQuote">--</span></span>
+            </div>
+            
+            <div class="candlestick-chart" id="candlestickChart">
+                <!-- Chart will be drawn here -->
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer"></div>
+    
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentYearSpan = document.getElementById('currentYear');
+            if (currentYearSpan) {
+                currentYearSpan.textContent = new Date().getFullYear();
+            }
+        });
+    </script>
+</body>
+</html>
