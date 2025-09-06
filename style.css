@@ -4,21 +4,26 @@
     box-sizing: border-box;
 }
 
-body {
+html, body {
+    height: 100%;
+    min-height: 100%; /* Ensure full height */
+    margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: #1a1a1a;
     color: #ffffff;
-    overflow: hidden;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
     user-select: none;
 }
 
+/* Base styles for app container, filter panel, and results area (Desktop-first approach) */
 .app-container {
     display: flex;
     height: 100vh;
+    width: 100%; /* Ensure app container takes full width */
+    overflow-x: hidden; /* Hide any overflow within app container */
 }
 
 .filter-panel {
-    width: 400px;
     background: #2d2d2d;
     padding: 20px 20px 0 20px;
     border-right: 1px solid #404040;
@@ -26,6 +31,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: 30px;
+    width: 400px; /* Default desktop width */
+    position: static; /* Default static position for desktop */
+    transition: transform 0.3s ease-in-out;
 }
 
 .filter-title {
@@ -37,7 +45,6 @@ body {
 }
 
 .exchange-section {
-    /* margin-bottom: 25px; REMOVED, handled by filter-panel gap */
     display: grid;
     grid-template-columns: 1fr;
     gap: 15px;
@@ -47,7 +54,6 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    /* margin-bottom: 10px; REMOVED, handled by grid gap */
     padding: 10px 15px;
     background: #3a3a3a;
     border-radius: 8px;
@@ -87,7 +93,6 @@ body {
 }
 
 .exclusion-section {
-    /* margin-bottom: 25px; REMOVED, handled by filter-panel gap */
     border-top: 1px solid #404040;
     padding-top: 25px;
 }
@@ -106,7 +111,6 @@ body {
 }
 
 .candle-section {
-    /* margin-bottom: 25px; REMOVED, handled by filter-panel gap */
     border-top: 1px solid #404040;
     padding-top: 25px;
 }
@@ -131,7 +135,6 @@ body {
 .radio-item {
     display: flex;
     align-items: flex-start;
-    /* margin-bottom: 10px; REMOVED, handled by gap */
     cursor: pointer;
 }
 
@@ -162,7 +165,7 @@ body {
 }
 
 .filter-group {
-    /* margin-bottom: 15px; REMOVED, handled by filter-panel gap */
+    /* No default margin-bottom, handled by filter-panel gap */
 }
 
 .input-label {
@@ -210,38 +213,35 @@ select.input-field {
 
 .button-group {
     margin-top: auto;
-    padding-top: 20px; /* Reduced padding before button */
+    padding-top: 20px;
     border-top: 1px solid #404040;
-    position: sticky; /* Make the button group stick */
-    bottom: 0; /* Stick to the bottom of its parent */
-    background: #2d2d2d; /* Match filter-panel background to avoid transparency issues */
-    z-index: 10; /* Ensure it stays above other content when sticking */
-    padding-bottom: 20px; /* Add padding to the bottom */
+    position: sticky;
+    bottom: 0;
+    background: #2d2d2d;
+    z-index: 10;
+    padding-bottom: 20px;
 }
 
 .scan-button {
-    /* Revert to a more subtle appearance matching the screenshot */
-    width: auto; /* Allow button to size naturally */
-    padding: 10px 20px; /* Smaller padding */
-    background: #ffd700; /* Darker background for subtle look */
-    color: #3a3a3a; /* Lighter text color */
-    border: 1px solid #555; /* Subtle border */
-    border-radius: 5px; /* Slightly less rounded */
-    font-size: 16px; /* Smaller font size */
-    font-weight: bold; /* Normal weight */
+    width: auto;
+    padding: 10px 20px;
+    background: #ffd700;
+    color: #3a3a3a;
+    border: 1px solid #555;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Softer shadow */
-    display: block; /* Still block to take new width rules */
-    margin-left: auto; /* Keep centering */
-    margin-right: auto; /* Keep centering */
-    /* max-width: 300px; REMOVED, not needed with auto width */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .scan-button:hover {
-    /* background: #555; Slightly lighter on hover */
-    transform: translateY(-1px); /* Subtle lift */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* Slightly more pronounced hover shadow */
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
 
 .scan-button:active {
@@ -250,39 +250,41 @@ select.input-field {
 }
 
 .scan-button.scanning {
-    background: #555; /* Subtle background when scanning */
+    background: #555;
     color: #ccc;
     cursor: not-allowed;
     pointer-events: none;
-    animation: none; /* Remove pulsing animation for subtle look */
+    animation: none;
 }
 
 @keyframes pulse {
-    /* Remove keyframes as animation is removed */
+    /* Removed */
 }
 
 .results-area {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
+    overflow-x: auto; /* Add horizontal scroll for content overflow */
+    min-width: 0; /* Allow results area to shrink as needed */
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between; /* Space out items, push copyright to bottom */
+    justify-content: space-between;
     text-align: center;
-    height: 100%; /* Ensure results-area takes full height to enable space-between */
+    height: 100%;
 }
 
 .initial-display {
     max-width: 600px;
-    margin: auto; /* Center the content */
+    margin: auto;
     padding: 30px;
     color: #e0e0e0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    flex-grow: 1; /* Allow initial-display to grow and push copyright down */
-    justify-content: center; /* Center content vertically within itself */
+    flex-grow: 1;
+    justify-content: center;
 }
 
 .initial-display h2 {
@@ -298,12 +300,12 @@ select.input-field {
 }
 
 .copyright-info {
-    margin-top: auto; /* Push copyright to the bottom */
+    margin-top: auto;
     padding-top: 15px;
     font-size: 0.85em;
     color: #888;
     border-top: 1px solid #444;
-    width: 100%; /* Ensure it spans full width */
+    width: 100%;
 }
 
 .results-table {
@@ -520,7 +522,7 @@ select.input-field {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 .success-message {
@@ -578,7 +580,7 @@ select.input-field {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
-    z-index: 1000;
+    z-index: 10000; /* Increased z-index to ensure it's above filter button */
     display: none;
     justify-content: center;
     align-items: center;
@@ -591,9 +593,9 @@ select.input-field {
 .chart-container {
     background: #2d2d2d;
     border-radius: 10px;
-    padding: 10px; /* Reduced padding */
-    max-width: 98%; /* Increased max-width */
-    max-height: 90%;
+    padding: 10px;
+    max-width: 95%; /* Increased max-width for desktop */
+    max-height: 95%; /* Increased max-height for desktop */
     overflow: auto;
     position: relative;
 }
@@ -628,9 +630,9 @@ select.input-field {
 }
 
 .chart-info {
-    display: grid; /* Changed from flex to grid */
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Responsive columns */
-    gap: 15px 25px; /* Keep existing gap, can adjust later */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px 25px;
     margin-bottom: 20px;
     padding: 15px;
     background: #3a3a3a;
@@ -745,10 +747,10 @@ select.input-field {
     padding: 12px 20px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; /* Add transition for smooth animation */
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
     opacity: 0;
     transform: translateX(100%);
-    width: 250px; /* Set a consistent minimum width */
+    width: 250px;
     text-align: center;
 }
 
@@ -790,3 +792,145 @@ select.input-field {
 .view-live-link:hover {
     transform: translateY(-1px);
 }
+
+/* Filter Toggle Button for Mobile (hidden by default on desktop) */
+.filter-toggle-button {
+    display: none; /* Hidden by default on desktop */
+}
+
+@media (max-width: 620px){
+    .results-table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        table-layout: fixed; /* Ensures even column distribution */
+        width: 100%; /* Ensures table takes full width of its container */
+    }
+}
+
+/* Responsive Overrides for Mobile (max-width: 768px) */
+@media (max-width: 999px) {
+    .app-container {
+        display: block; /* Stack elements vertically on mobile */
+        height: auto;
+    }
+
+    .filter-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw; /* Take full viewport width */
+        max-width: 350px; /* Max width for better usability */
+        bottom: 0; /* Extend to the bottom of the viewport */
+        overflow-y: auto; /* Enable vertical scrolling */
+        transform: translateX(-100vw); /* Initially hidden off-screen */
+        z-index: 1000; /* Ensure it's on top */
+        padding-top: 60px; /* Space for the toggle button */
+        /* padding-bottom: 20px; Add padding to the bottom */
+        border-right: 1px solid #404040;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5); /* Add a subtle shadow */
+        flex-shrink: 0; /* Prevent shrinking */
+    }
+
+    .filter-panel.show-on-mobile {
+        transform: translateX(0); /* Slide into view */
+    }
+
+    .filter-toggle-button {
+        display: block; /* Show on mobile */
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 1001; /* Ensure button is above the panel */
+        padding: 12px 18px; /* Slightly more padding */
+        background: #ffd700;
+        color: #3a3a3a;
+        border: 1px solid #ffcc00; /* Subtle border */
+        border-radius: 8px; /* Slightly more rounded corners */
+        font-size: 16px; /* Slightly larger font */
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Add a shadow */
+        transition: all 0.2s ease; /* Smooth transitions for interaction */
+    }
+
+    .results-area {
+        padding-top: 60px; /* Space for the fixed toggle button */
+        width: 100%;
+        margin-left: 0;
+    }
+
+    /* Table Responsiveness for Mobile */
+
+    .results-table thead {
+        display: table-header-group;
+    }
+    .results-table tbody {
+        display: table-row-group;
+    }
+    
+    .results-table th, .results-table td {
+        display: table-cell; /* Revert to table-cell behavior */
+        text-align: left;
+        padding: 10px;
+        width: auto; /* Allow content to dictate width, or fixed width if set */
+    }
+    .results-table tr {
+        display: table-row;
+    }
+
+    .results-table td {
+        border-bottom: 1px solid #404040;
+    }
+
+    /* Removed .results-table th:first-child, .results-table td:first-child width: 100%; */
+
+    /* Chart Modal Adjustments for Mobile */
+    .chart-container {
+        padding: 5px;
+        max-width: 100%;
+        max-height: 100%;
+    }
+
+    .chart-header {
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .chart-title {
+        font-size: 20px;
+    }
+
+    .close-chart {
+        width: 100%;
+    }
+    
+    .chart-info {
+        grid-template-columns: 1fr;
+        font-size: 12px;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    /* Progress Container Adjustments for Mobile */
+    .progress-header {
+        flex-direction: column; /* Stack title and status vertically */
+        align-items: flex-start;
+    }
+
+    .progress-title {
+        margin-right: 0;
+        margin-bottom: 5px; /* Add some space below the title */
+    }
+
+    .progress-detail-item {
+        flex-direction: column; /* Stack pair name and status vertically */
+        align-items: flex-start;
+    }
+
+    .progress-detail-item .pair-name {
+        margin-right: 0;
+        margin-bottom: 5px; /* Add some space below the pair name */
+    }
+} 

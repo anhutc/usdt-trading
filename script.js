@@ -49,8 +49,8 @@ class USDTTradingPortable {
             'binance': ['1h', '4h', '1d', '3d', '1w', '1M'],
             'okx': ['1h', '4h', '1d', '1w', '1M'],
             'huobi': ['1h', '4h', '1d', '1w', '1M'],
-            'gate': ['1h', '4h', '1d', '3d', '1w', '1M'],
-            'mexc': ['1h', '4h', '1d', '3d', '1w', '1M'],
+            'gate': ['1800', '3600', '86400', '259200', '604800', '2592000'],
+            'mexc': ['30m', '1h', '1d', '3d', '1w', '1M'],
             'bybit': ['1h', '4h', '1d', '1w', '1M']
         };
 
@@ -65,6 +65,13 @@ class USDTTradingPortable {
         this.updateDisplayState([], null); 
         
         this.selectedRow = null;
+
+        // Initialize display state
+        this.updateDisplayState();
+
+        this.corsProxyBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8080' : window.location.origin;
+        this.selectedConditions = {}; // Initialize selected conditions object
+        this.resultLimit = 5; // Default result limit
     }
 
     setupEventListeners() {
@@ -195,7 +202,7 @@ class USDTTradingPortable {
             this.scanButton.classList.add('scanning');
             this.scanButton.disabled = true;
         } else {
-            this.scanButton.textContent = 'Bắt đầu quét';
+            this.scanButton.textContent = 'Lọc dữ liệu thị trường';
             this.scanButton.classList.remove('scanning');
             this.scanButton.disabled = false;
         }
@@ -235,13 +242,13 @@ class USDTTradingPortable {
             
             const filters = this.getFilters();
             if (filters.exchanges.length === 0) {
-                this.showToast('Vui lòng chọn ít nhất một sàn giao dịch để bắt đầu quét.', 'error');
+                this.showToast('Vui lòng chọn ít nhất một sàn giao dịch để bắt đầu lọc dữ liệu thị trường.', 'error');
                 this.hideLoading();
                 this.updateDisplayState([], null); // Centralized: Show initial content if no exchanges selected
                 return;
             }
 
-            this.showToast('Bắt đầu quét thị trường...', 'info');
+            this.showToast('Bắt đầu lọc dữ liệu thị trường...', 'info');
             
             this.showLoading();
             const results = await this.fetchRealDataFromExchanges(filters);
@@ -308,7 +315,7 @@ class USDTTradingPortable {
         let hasRealData = false;
         // const maxResults = 1; // Giới hạn số lượng cặp thỏa mãn (đã chuyển sang lấy từ filters)
         
-        console.log('🔍 Bắt đầu quét với điều kiện:', filters);
+        console.log('🔍 Bắt đầu lọc dữ liệu thị trường với điều kiện:', filters);
         
         // Lấy tất cả cặp USDT từ từng sàn
         for (const exchangeObj of filters.exchanges) { // Iterate over objects now
@@ -343,7 +350,7 @@ class USDTTradingPortable {
                         
                         if (exchangeData && exchangeData.candles.length > 0) {
                             hasRealData = true;
-                            console.log(`  ✅ Nhận được ${exchangeData.candles.length} nến 3D từ ${exchangeId} cho ${pair}`);
+                            console.log(`  ✅ Nhận được ${exchangeData.candles.length} nến từ ${exchangeId} cho ${pair} với interval ${selectedInterval}`);
                             
                             // Kiểm tra điều kiện với dữ liệu thực
                             console.log(`  🔍 Kiểm tra điều kiện nến...`);
@@ -442,7 +449,9 @@ class USDTTradingPortable {
             // const candleCount = parseInt(filters.candleCount) || 6; // Đã loại bỏ, thay bằng candleInterval
             const limit = filters.numberOfCandles; // Use global number of candles
             const volumePeriods = parseInt(filters.volumePeriods) || 20;
-            const exchangeInterval = this.getExchangeInterval(exchangeId, filters.exchanges.find(e => e.id === exchangeId).interval); // Get specific interval for this exchange
+            const selectedInterval = filters.exchanges.find(e => e.id === exchangeId).interval; // Get original interval from dropdown
+            const exchangeInterval = this.getExchangeInterval(exchangeId, selectedInterval); // Get specific interval for this exchange
+            console.log(`[DEBUG] ${exchangeId} - Selected interval: ${selectedInterval}, API interval: ${exchangeInterval}`);
             
             let candles = [];
             let volumes = [];
@@ -467,15 +476,66 @@ class USDTTradingPortable {
                     break;
                     
                 case 'gate':
-                    const gateData = await this.fetchGateData(symbol, exchangeInterval, limit);
+                    const gateData = await this.fetchGateData(symbol, exchangeInterval, limit, selectedInterval);
                     candles = gateData.candles;
                     volumes = gateData.volumes;
                     break;
                     
                 case 'mexc':
-                    const mexcData = await this.fetchMEXCData(symbol, exchangeInterval, limit);
+                    let mexcFetchInterval = exchangeInterval; // Default to original interval
+                    let fetchLimit = limit; // Default fetch limit
+
+                    if (selectedInterval === '1h') {
+                        mexcFetchInterval = '30m'; // Fetch 30-minute data to aggregate to 1 hour
+                        fetchLimit = limit * 2; // Need twice as many 30m candles for N 1h candles
+                    } else if (selectedInterval === '3d') {
+                        mexcFetchInterval = '1d'; // Fetch 1-day data to aggregate to 3 days
+                        fetchLimit = limit * 3; // Need three times as many 1d candles for N 3d candles
+                    } else if (selectedInterval === '1w') {
+                        mexcFetchInterval = '1d'; // Fetch 1-day data to aggregate to 1 week
+                        fetchLimit = limit * 7; // Need seven times as many 1d candles for N 1w candles
+                    }
+                    const mexcData = await this.fetchMEXCData(symbol, mexcFetchInterval, fetchLimit);
+
                     candles = mexcData.candles;
                     volumes = mexcData.volumes;
+                    if (selectedInterval === '1h' || selectedInterval === '3d' || selectedInterval === '1w') {
+                        let targetSeconds;
+                        if (selectedInterval === '1h') {
+                            targetSeconds = 1 * 3600; // 1 hour
+                        } else if (selectedInterval === '3d') {
+                            targetSeconds = 3 * 86400; // 3 days
+                        } else if (selectedInterval === '1w') {
+                            targetSeconds = 7 * 86400; // 1 week
+                        }
+                        // Ensure raw data for aggregation is in the correct format
+                        const rawCandles = mexcData.candles.map(c => [
+                            Math.floor(c.timestamp / 1000).toString(),
+                            c.volume.toString(),
+                            c.close.toString(),
+                            c.high.toString(),
+                            c.low.toString(),
+                            c.open.toString(),
+                            (c.volume * c.close).toString(), // Assuming quoteVolume is volume * close
+                            'true'
+                        ]);
+                        const aggregated = this.aggregateCandles(rawCandles, (targetSeconds).toString());
+                        // Convert back to internal candle shape (newest-first)
+                        const aggCandles = aggregated.slice().reverse().map(k => ({
+                            timestamp: parseFloat(k[0]) * 1000,
+                            open: parseFloat(k[5]),
+                            high: parseFloat(k[3]),
+                            low: parseFloat(k[4]),
+                            close: parseFloat(k[2]),
+                            volume: parseFloat(k[1])
+                        }));
+                        const aggVolumes = aggregated.slice().reverse().map(k => ({
+                            baseVolume: parseFloat(k[1]),
+                            quoteVolume: parseFloat(k[6])
+                        }));
+                        candles = aggCandles;
+                        volumes = aggVolumes;
+                    }
                     break;
                     
                 case 'bybit':
@@ -530,12 +590,6 @@ class USDTTradingPortable {
 
     // Binance - Lấy tất cả cặp USDT
     async getBinanceUSDTPairs() {
-        const fallbackPairs = [
-            'BTC/USDT', 'ETH/USDT', 'ADA/USDT', 'DOT/USDT', 'LINK/USDT', 
-            'UNI/USDT', 'LTC/USDT', 'BCH/USDT', 'XRP/USDT', 'SOL/USDT',
-            'MATIC/USDT', 'AVAX/USDT', 'ATOM/USDT', 'NEAR/USDT', 'FTM/USDT'
-        ];
-        
         const data = await this.fetchWithFallback('https://api.binance.com/api/v3/exchangeInfo'); // Xóa fallbackValue
         
         if (data && data.symbols && data.symbols.length > 0) {
@@ -543,19 +597,12 @@ class USDTTradingPortable {
                 .filter(symbol => symbol.quoteAsset === 'USDT' && symbol.status === 'TRADING')
                 .map(symbol => symbol.baseAsset + '/USDT');
         }
-        
-        console.log('Sử dụng danh sách cặp mẫu cho Binance');
-        return fallbackPairs;
+        console.warn('[WARN] Binance: Không có dữ liệu symbols từ API. Bỏ qua sàn này.');
+        return [];
     }
 
     // OKX - Lấy tất cả cặp USDT
     async getOKXUSDTPairs() {
-        const fallbackPairs = [
-            'BTC/USDT', 'ETH/USDT', 'ADA/USDT', 'DOT/USDT', 'LINK/USDT', 
-            'UNI/USDT', 'LTC/USDT', 'BCH/USDT', 'XRP/USDT', 'SOL/USDT',
-            'MATIC/USDT', 'AVAX/USDT', 'ATOM/USDT', 'NEAR/USDT', 'FTM/USDT'
-        ];
-        
         const data = await this.fetchWithFallback('https://www.okx.com/api/v5/public/instruments?instType=SPOT'); // Xóa fallbackValue
         
         if (data && data.data && data.data.length > 0) {
@@ -563,19 +610,12 @@ class USDTTradingPortable {
                 .filter(instrument => instrument.quoteCcy === 'USDT' && instrument.state === 'live')
                 .map(instrument => instrument.baseCcy + '/USDT');
         }
-        
-        console.log('Sử dụng danh sách cặp mẫu cho OKX');
-        return fallbackPairs;
+        console.warn('[WARN] OKX: Không có dữ liệu instruments từ API. Bỏ qua sàn này.');
+        return [];
     }
 
     // Huobi - Lấy tất cả cặp USDT
     async getHuobiUSDTPairs() {
-        const fallbackPairs = [
-            'BTC/USDT', 'ETH/USDT', 'ADA/USDT', 'DOT/USDT', 'LINK/USDT', 
-            'UNI/USDT', 'LTC/USDT', 'BCH/USDT', 'XRP/USDT', 'SOL/USDT',
-            'MATIC/USDT', 'AVAX/USDT', 'ATOM/USDT', 'NEAR/USDT', 'FTM/USDT'
-        ];
-        
         const data = await this.fetchWithFallback('https://api.huobi.pro/v1/common/symbols'); 
         console.log('[DEBUG] Huobi raw symbols data:', data);
         
@@ -597,69 +637,71 @@ class USDTTradingPortable {
             console.log('[DEBUG] Huobi mapped pairs:', mapped);
             return mapped;
         }
-        
-        console.log('[DEBUG] Huobi: Không có dữ liệu cặp từ API, sử dụng dữ liệu mẫu.');
-        return fallbackPairs; // Return fallback for now
+        console.warn('[WARN] Huobi: Không có dữ liệu symbols từ API. Bỏ qua sàn này.');
+        return [];
     }
 
     // Gate - Lấy tất cả cặp USDT
     async getGateUSDTPairs() {
-        const fallbackPairs = [
-            'BTC/USDT', 'ETH/USDT', 'ADA/USDT', 'DOT/USDT', 'LINK/USDT', 
-            'UNI/USDT', 'LTC/USDT', 'BCH/USDT', 'XRP/USDT', 'SOL/USDT',
-            'MATIC/USDT', 'AVAX/USDT', 'ATOM/USDT', 'NEAR/USDT', 'FTM/USDT'
-        ];
-        
-        const data = await this.fetchWithFallback('https://api.gateio.ws/api/v4/spot/currency_pairs', 'gate'); // Xóa fallbackValue
+        const data = await this.fetchWithFallback('https://api.gateio.ws/api/v4/spot/currency_pairs', 'gate');
+        if (!data) {
+            console.warn('[WARN] Gate: Không có dữ liệu currency_pairs từ API. Bỏ qua sàn này.');
+            return;
+        }
+        console.log('[DEBUG] Gate.io Raw currency_pairs response:', data); // Log raw response
         
         if (data && data.length > 0) {
             return data
                 .filter(pair => pair.quote === 'USDT' && pair.trade_status === 'tradable')
                 .map(pair => pair.base + '/USDT');
         }
-        
-        console.log('Sử dụng danh sách cặp mẫu cho Gate');
-        return fallbackPairs;
+        console.warn('[WARN] Gate: Không có dữ liệu currency_pairs từ API. Bỏ qua sàn này.');
+        return [];
     }
 
     // MEXC - Lấy tất cả cặp USDT
     async getMEXCUSDTPairs() {
         try {
             const data = await this.fetchWithFallback('https://api.mexc.com/api/v3/exchangeInfo', 'mexc');
+            console.log('[DEBUG] MEXC Raw exchangeInfo response:', data); // Log raw response
+
             if (!data) {
-                this.showToast('❌ Lỗi lấy danh sách cặp từ mexc: Không có dữ liệu', 'error');
-                throw new Error('Không thể lấy dữ liệu từ MEXC');
+                console.warn('[WARN] MEXC: Không có dữ liệu exchangeInfo từ API. Bỏ qua sàn này.');
+                return;
             }
-            if (data && data.data && data.data.length > 0) {
-                return data.data
-                    .filter(market => market.quoteCurrency === 'USDT' && market.status === 1)
-                    .map(market => market.baseCurrency + '/USDT');
+            // MEXC v3 exchangeInfo returns { timezone, serverTime, symbols: [...] }
+            if (data && Array.isArray(data.symbols) && data.symbols.length > 0) {
+                const pairs = data.symbols
+                    .filter(s => (s.quoteAsset || s.quoteCurrency) === 'USDT' && (s.status === '1' || s.status === 1 || s.status === 'ENABLED' || s.status === 'TRADING'))
+                    .map(s => {
+                        const base = (s.baseAsset || s.baseCurrency || '').toUpperCase();
+                        const quote = (s.quoteAsset || s.quoteCurrency || '').toUpperCase();
+                        return `${base}/${quote}`;
+                    });
+                if (pairs.length > 0) {
+                    return pairs;
+                }
             }
         } catch (error) {
             console.error(`Lỗi lấy dữ liệu từ MEXC:`, error);
             this.showToast(`Lỗi kết nối API.`, 'error'); // Thay thế updateStatusBar
-            throw error;
+            return [];
         }
+        console.warn('[WARN] MEXC: Không có dữ liệu symbols từ API. Bỏ qua sàn này.');
+        return [];
     }
 
     // Bybit - Lấy tất cả cặp USDT
     async getBybitUSDTPairs() {
-        const fallbackPairs = [
-            'BTC/USDT', 'ETH/USDT', 'ADA/USDT', 'DOT/USDT', 'LINK/USDT', 
-            'UNI/USDT', 'LTC/USDT', 'BCH/USDT', 'XRP/USDT', 'SOL/USDT',
-            'MATIC/USDT', 'AVAX/USDT', 'ATOM/USDT', 'NEAR/USDT', 'FTM/USDT'
-        ];
-        
-        const data = await this.fetchWithFallback('https://api.bybit.com/v5/market/instruments-info?category=spot'); // Xóa fallbackValue
+        const data = await this.fetchWithFallback('https://api.bybit.com/v5/market/instruments-info?category=spot');
         
         if (data && data.result && data.result.list && data.result.list.length > 0) {
             return data.result.list
                 .filter(instrument => instrument.quoteCoin === 'USDT' && instrument.status === 'Trading')
                 .map(instrument => instrument.baseCoin + '/USDT');
         }
-        
-        console.log('Sử dụng danh sách cặp mẫu cho Bybit');
-        return fallbackPairs;
+        console.warn('[WARN] Bybit: Không có dữ liệu instruments từ API. Bỏ qua sàn này.');
+        return [];
     }
 
     convertPairToSymbol(pair, exchangeId) {
@@ -873,30 +915,76 @@ class USDTTradingPortable {
         }
     }
 
-    async fetchGateData(symbol, interval, limit) {
+    async fetchGateData(symbol, interval, limit, selectedInterval) {
         try {
+            // Thử với limit parameter và format khác
             const response = await this.fetchWithFallback(
                 `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${interval}&limit=${limit}`,
                 'gate'
             );
+            console.log(`[DEBUG] Gate.io Raw kline data for ${symbol} with interval ${interval}:`, response); // Log raw response
+            if (response && response.length > 0) {
+                console.log(`[DEBUG] Gate.io First candle structure:`, response[0]);
+                console.log(`[DEBUG] Gate.io Last candle structure:`, response[response.length - 1]);
+                console.log(`[DEBUG] Gate.io Data format: [timestamp, volume, close, high, low, open, quote_volume, status]`);
+                
+                // Check time difference between first and second candle
+                if (response.length > 1) {
+                    const timeDiff = parseFloat(response[1][0]) - parseFloat(response[0][0]);
+                    console.log(`[DEBUG] Gate.io Time difference between candles: ${timeDiff} seconds (${timeDiff/60} minutes, ${timeDiff/3600} hours)`);
+                    console.log(`[DEBUG] Gate.io Expected interval: ${interval} seconds (${parseInt(interval)/60} minutes, ${parseInt(interval)/3600} hours)`);
+                }
+            }
 
             if (response && response.length > 0) {
-                const candles = response.map(kline => ({
-                    timestamp: parseFloat(kline[0]) * 1000,
-                    open: parseFloat(kline[1]),
-                    high: parseFloat(kline[2]),
-                    low: parseFloat(kline[3]),
-                    close: parseFloat(kline[4]),
-                    volume: parseFloat(kline[5])
+                const desiredCandleCount = limit; // `limit` ở đây là filters.numberOfCandles
+                
+                // Nếu interval lớn hơn 30 phút, gộp dữ liệu 30 phút thành interval mong muốn
+                let processedCandles = response;
+                if (selectedInterval !== '1800') { // Nếu không phải 30 phút
+                    processedCandles = this.aggregateCandlesToInterval(response, selectedInterval);
+                    console.log(`[DEBUG] Gate.io Aggregated ${response.length} 30-min candles into ${processedCandles.length} ${selectedInterval}-second candles`);
+                }
+                
+                // Lấy N nến gần nhất từ cuối mảng (client-side limiting)
+                const recentCandles = processedCandles.slice(-desiredCandleCount);
+                // Gate returns ascending by time; convert to newest-first to align with other exchanges
+                const orderedRecentCandles = recentCandles.slice().reverse();
+
+                const candles = orderedRecentCandles.map((kline, index) => {
+                    // Gate.io API trả về array với format: [timestamp, volume, close, high, low, open, quote_volume, status]
+                    // Dựa trên file log.txt: [0]=timestamp, [1]=volume, [2]=close, [3]=high, [4]=low, [5]=open, [6]=quote_volume, [7]=status
+                    const timestamp = parseFloat(kline[0]) * 1000;  // Convert seconds to milliseconds
+                    const candle = {
+                        timestamp: timestamp,
+                        open: parseFloat(kline[5]),              // Open Price (index 5)
+                        high: parseFloat(kline[3]),              // High Price (index 3)
+                        low: parseFloat(kline[4]),               // Low Price (index 4)
+                        close: parseFloat(kline[2]),             // Close Price (index 2)
+                        volume: parseFloat(kline[1])             // Base Volume (index 1)
+                    };
+                    
+                    // Debug logging for first few candles
+                    if (index < 3) {
+                        const date = new Date(timestamp);
+                        console.log(`[DEBUG] Gate.io Candle ${index + 1}:`, {
+                            rawTimestamp: kline[0],
+                            convertedTimestamp: timestamp,
+                            date: date.toLocaleString('vi-VN'),
+                            interval: interval
+                        });
+                    }
+                    
+                    return candle;
+                });
+                const volumes = orderedRecentCandles.map(kline => ({ 
+                    baseVolume: parseFloat(kline[1]),   // base_volume (index 1)
+                    quoteVolume: parseFloat(kline[6])   // quote_volume (index 6)
                 }));
-                const volumes = response.map(kline => ({ 
-                    baseVolume: parseFloat(kline[5]), 
-                    quoteVolume: parseFloat(kline[5]) * parseFloat(kline[4]) 
-                }));
-                    return { candles, volumes };
+                return { candles, volumes };
             } else {
                 console.log(`📊 Gate ${symbol}: Không có dữ liệu nến`);
-            return { candles: [], volumes: [] };
+                return { candles: [], volumes: [] };
             }
         } catch (error) {
             console.error(`Lỗi lấy dữ liệu từ Gate:`, error);
@@ -906,29 +994,45 @@ class USDTTradingPortable {
 
     async fetchMEXCData(symbol, interval, limit) {
         try {
-            const [base, quote] = symbol.split('/');
-            const response = await this.fetchWithFallback('mexc',
-                `https://www.mexc.com/api/platform/spot/market/kline?symbol=${base}${quote}&interval=${interval}&limit=${limit}`,
-                null
+            const [base, quote] = symbol.split('_'); // MEXC symbols are typically BASE_QUOTE (e.g., BTC_USDT)
+            const response = await this.fetchWithFallback(
+                `https://api.mexc.com/api/v3/klines?symbol=${base}${quote}&interval=${interval}&limit=${limit}`,
+                'mexc'
             );
-            if (!response || !response.data || response.data.length === 0) {
+            console.log(`[DEBUG] MEXC Raw kline data for ${symbol}:`, response); // Log raw response
+
+            // Guard: API error via proxy may return an object with code/msg instead of array
+            if (!response || (Array.isArray(response) && response.length === 0)) {
                 this.showToast('❌ Lỗi lấy dữ liệu từ MEXC: Không có dữ liệu', 'error');
                 throw new Error('Không thể lấy dữ liệu từ MEXC');
             }
-            if (response && response.data && response.data.length > 0) {
-                const candles = response.data.map(kline => ({
-                    timestamp: kline[0],
+            if (!Array.isArray(response)) {
+                const code = response.code || 'unknown';
+                const msg = response.msg || 'Unknown error';
+                console.warn(`[DEBUG] MEXC error response: code=${code}, msg=${msg}`);
+                this.showToast(`MEXC lỗi: ${msg}`, 'error');
+                return { candles: [], volumes: [] };
+            }
+            if (response && response.length > 0) {
+                // MEXC returns ascending by time; convert to newest-first to align with others
+                const klines = response.slice().reverse();
+                const candles = klines.map(kline => ({
+                    timestamp: parseInt(kline[0]),
                     open: parseFloat(kline[1]),
                     high: parseFloat(kline[2]),
                     low: parseFloat(kline[3]),
                     close: parseFloat(kline[4]),
                     volume: parseFloat(kline[5])
                 }));
-                const volumes = response.data.map(kline => ({ 
+                const volumes = klines.map(kline => ({ 
                     baseVolume: parseFloat(kline[5]), 
                     quoteVolume: parseFloat(kline[5]) * parseFloat(kline[4]) 
                 }));
-                    return { candles, volumes };
+                // If user requested 3d or 1w, aggregate daily candles
+                if (interval === '1d' && (limit && limit > 0)) {
+                    // No extra action; base set is daily
+                }
+                return { candles, volumes };
             }
         } catch (error) {
             console.error(`Lỗi lấy dữ liệu từ MEXC:`, error);
@@ -1031,9 +1135,11 @@ class USDTTradingPortable {
     }
 
     showLoading() {
-        this.loading.classList.remove('hidden');
         this.resultsTable.classList.add('hidden');
         this.initialContent.classList.add('hidden'); // Explicitly hide initial content when loading
+        this.errorMessageContainer.classList.add('hidden');
+        
+        this.loading.classList.remove('hidden');
         this.progressContainer.classList.remove('hidden'); // Hiển thị progressContainer
     }
 
@@ -1168,12 +1274,26 @@ class USDTTradingPortable {
     }
 
     drawTimeLabels(svg, chartWidth, totalChartHeight, margin, candleData, startX, candleWidth, spacing, yOffset) {
-        // Display dates instead of Nến 1, Nến 3, ...
+        // Display dates and times based on the actual interval
         candleData.forEach((candle, index) => {
             const x = startX + index * (candleWidth + spacing) + candleWidth / 2;
             
             const date = new Date(candle.timestamp);
-            const formattedDate = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            
+            // Format based on the interval - show more detail for shorter intervals
+            let formattedDate;
+            if (this.currentResult && this.currentResult.exchangeId === 'gate') {
+                // For Gate.io, show both date and time since we're dealing with different intervals
+                formattedDate = date.toLocaleString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } else {
+                // For other exchanges, show date only
+                formattedDate = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            }
 
             const timeLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
             timeLabel.setAttribute('x', x);
@@ -1197,7 +1317,7 @@ class USDTTradingPortable {
         // Create SVG for multiple candlesticks
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
-        svg.setAttribute('height', '500'); // Adjusted overall height
+        svg.setAttribute('height', '100%'); // Adjusted overall height
         svg.setAttribute('viewBox', '0 0 800 500'); // Adjusted viewBox
         
         // Calculate chart dimensions
@@ -1273,19 +1393,46 @@ class USDTTradingPortable {
 
             // Add hover event listener to the candlestick body for updating chart-info
             body.addEventListener('mouseenter', () => {
-                const hoveredCandle = reversedCandleData[index];
-                const previousHoveredCandle = index > 0 ? reversedCandleData[index - 1] : null;
-                this.updateChartInfo(hoveredCandle, index, this.currentResult, previousHoveredCandle, reversedCandleData, this.currentResult.volumeData);
+                if (window.innerWidth > 768) { // Only for desktop
+                    const hoveredCandle = reversedCandleData[index];
+                    const previousHoveredCandle = index > 0 ? reversedCandleData[index - 1] : null;
+                    this.updateChartInfo(hoveredCandle, index, this.currentResult, previousHoveredCandle, reversedCandleData, this.currentResult.volumeData);
+                    this.highlightTimeLabel(index, true);
+                }
+            });
+
+            // Add click/tap event listener for updating chart-info on all devices
+            body.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent modal from closing if chartModal has click listener
+                
+                // Remove highlight from previously clicked candle, if any
+                if (this.lastClickedCandleIndex !== undefined && this.lastClickedCandleIndex !== -1 && this.lastClickedCandleIndex !== index) {
+                    this.highlightTimeLabel(this.lastClickedCandleIndex, false);
+                }
+
+                const clickedCandle = reversedCandleData[index];
+                const previousClickedCandle = index > 0 ? reversedCandleData[index - 1] : null;
+                this.updateChartInfo(clickedCandle, index, this.currentResult, previousClickedCandle, reversedCandleData, this.currentResult.volumeData);
                 this.highlightTimeLabel(index, true);
+                this.lastClickedCandleIndex = index; // Store the index of the newly clicked candle
             });
 
             // Add mouseleave event listener to the candlestick body for resetting chart-info
             body.addEventListener('mouseleave', () => {
-                const lastCandle = reversedCandleData[reversedCandleData.length - 1];
-                const previousCandle = reversedCandleData.length > 1 ? reversedCandleData[reversedCandleData.length - 2] : null;
-                this.updateChartInfo(lastCandle, reversedCandleData.length - 1, this.currentResult, previousCandle, reversedCandleData, this.currentResult.volumeData);
-                this.highlightTimeLabel(-1, false); // Remove highlight from all labels
+                if (window.innerWidth > 768 && this.lastClickedCandleIndex === undefined) { // Only for desktop and if no candle is explicitly clicked
+                    const lastCandleIndex = reversedCandleData.length - 1;
+                    const lastCandle = reversedCandleData[lastCandleIndex];
+                    const previousLastCandle = lastCandleIndex > 0 ? reversedCandleData[lastCandleIndex - 1] : null;
+                    this.updateChartInfo(lastCandle, lastCandleIndex, this.currentResult, previousLastCandle, reversedCandleData, this.currentResult.volumeData);
+                    this.highlightTimeLabel(lastCandleIndex, true);
+                }
             });
+
+            if (index === highlightIndex) {
+                // Highlight the initial candle (usually the latest one)
+                this.highlightTimeLabel(index, true);
+                this.lastClickedCandleIndex = index; // Set initial highlight as last clicked
+            }
 
             // Add data-index for linking to candles (used by time labels)
             body.setAttribute('data-index', index);
@@ -1614,6 +1761,71 @@ class USDTTradingPortable {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // Hàm gộp dữ liệu 30 phút thành interval mong muốn
+    aggregateCandles(candles, targetInterval) {
+        if (!candles || candles.length === 0) return [];
+        
+        const targetIntervalMs = parseInt(targetInterval) * 1000; // Convert to milliseconds
+        
+        const aggregatedCandles = [];
+        const candlesByPeriod = new Map();
+        
+        // Nhóm các nến 30 phút theo khoảng thời gian mong muốn
+        candles.forEach(candle => {
+            const timestamp = parseFloat(candle[0]) * 1000; // Convert to milliseconds
+            const periodStart = Math.floor(timestamp / targetIntervalMs) * targetIntervalMs;
+            const periodKey = periodStart.toString();
+            
+            if (!candlesByPeriod.has(periodKey)) {
+                candlesByPeriod.set(periodKey, []);
+            }
+            candlesByPeriod.get(periodKey).push(candle);
+        });
+        
+        // Tạo nến theo interval mong muốn
+        candlesByPeriod.forEach((periodCandles, periodKey) => {
+            if (periodCandles.length === 0) return;
+            
+            // Sắp xếp theo thời gian
+            periodCandles.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+            
+            const firstCandle = periodCandles[0];
+            const lastCandle = periodCandles[periodCandles.length - 1];
+            
+            // Tính toán OHLC cho nến theo interval
+            const open = parseFloat(firstCandle[5]); // Open của nến đầu tiên
+            const close = parseFloat(lastCandle[2]); // Close của nến cuối cùng
+            const high = Math.max(...periodCandles.map(c => parseFloat(c[3]))); // High cao nhất
+            const low = Math.min(...periodCandles.map(c => parseFloat(c[4]))); // Low thấp nhất
+            const volume = periodCandles.reduce((sum, c) => sum + parseFloat(c[1]), 0); // Tổng volume
+            const quoteVolume = periodCandles.reduce((sum, c) => sum + parseFloat(c[6]), 0); // Tổng quote volume
+            
+            // Sử dụng timestamp của nến đầu tiên trong khoảng thời gian
+            const periodTimestamp = parseFloat(firstCandle[0]);
+            
+            // Tạo nến với format giống như API trả về
+            const aggregatedCandle = [
+                periodTimestamp.toString(), // timestamp
+                volume.toString(), // volume
+                close.toString(), // close
+                high.toString(), // high
+                low.toString(), // low
+                open.toString(), // open
+                quoteVolume.toString(), // quote_volume
+                'true' // status
+            ];
+            
+            aggregatedCandles.push(aggregatedCandle);
+        });
+        
+        // Sắp xếp theo thời gian
+        aggregatedCandles.sort((a, b) => parseFloat(a[0]) - parseFloat(b[0]));
+        
+        console.log(`[DEBUG] Created ${aggregatedCandles.length} ${targetInterval}-second candles from ${candles.length} raw candles`);
+       
+        return aggregatedCandles;
+    }
+
     // Thêm delay giữa các API calls để tránh rate limiting
     async fetchWithRateLimit(url, fallbackData = null, delayMs = 100) {
         // Thêm delay trước khi gọi API
@@ -1676,31 +1888,50 @@ class USDTTradingPortable {
     }
 
     // Helper method để gọi API với fallback
-    async fetchWithFallback(url, exchangeId = null) { // Xóa fallbackData
+    async fetchWithFallback(url, exchangeId = null, retries = 3, delay = 1000) {
         let finalUrl = url;
         // Apply CORS proxy for specific exchanges if needed
+        // Removed CORS proxy for Gate.io and MEXC to test direct API calls.
+        // if ((exchangeId === 'gate' || exchangeId === 'mexc') && !url.startsWith('https://api.allorigins.win')) {
+        //     finalUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        //     console.log(`[DEBUG] Using CORS proxy for ${exchangeId}: ${finalUrl}`);
+        // }
 
-        try {
-            // Thử gọi API trực tiếp trước
-            const response = await fetch(finalUrl);
-            if (response.ok) {
-                const data = await response.json();
-                console.log(`✅ API call thành công: ${finalUrl}`);
-                if (exchangeId === 'gate' || exchangeId === 'mexc') {
-                    console.log(`[DEBUG] Raw data from ${exchangeId} (via proxy):`, data);
+        // Use local CORS proxy for Gate.io and MEXC
+        if ((exchangeId === 'gate' || exchangeId === 'mexc') && !url.startsWith(`${this.corsProxyBaseUrl}/proxy`)) {
+            // Encode the nested URL so query params (e.g., interval=1h) are preserved by the proxy
+            finalUrl = `${this.corsProxyBaseUrl}/proxy?url=${encodeURIComponent(url)}`;
+            console.log(`[DEBUG] Using local CORS proxy for ${exchangeId}: ${finalUrl}`);
+        }
+
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(finalUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`✅ API call thành công: ${finalUrl}`);
+                    if (exchangeId === 'gate' || exchangeId === 'mexc') {
+                        console.log(`[DEBUG] Raw data from ${exchangeId} (via proxy):`, data);
+                    }
+                    return data;
+                } else if (response.status === 429 && i < retries - 1) {
+                    console.warn(`⚠️ API call thất bại với status ${response.status}: ${finalUrl}. Thử lại sau ${delay / 1000} giây...`);
+                    this.showToast(`API call thất bại (${response.status}). Thử lại...`, 'warning');
+                    await this.delay(delay);
+                    delay *= 2; // Exponential backoff
+                } else {
+                    console.warn(`⚠️ API call thất bại với status ${response.status}: ${finalUrl}`);
+                    this.showToast(`API call thất bại (${response.status}).`, 'error');
+                    break; // Exit retry loop on other errors or final retry failure
                 }
-                return data;
-            } else {
-                console.warn(`⚠️ API call thất bại với status ${response.status}: ${finalUrl}`);
-                this.showToast(`API call thất bại (${response.status}).`, 'error'); // Thay thế updateStatusBar
+            } catch (error) {
+                console.error(`❌ Lỗi fetch từ ${finalUrl}:`, error);
+                this.showToast(`Lỗi kết nối API.`, 'error');
+                break; // Exit retry loop on network errors
             }
-        } catch (error) {
-            console.error(`❌ Lỗi fetch từ ${finalUrl}:`, error);
-            this.showToast(`Lỗi kết nối API.`, 'error'); // Thay thế updateStatusBar
         }
         
-        // Nếu không thành công, trả về null
-        console.log(`🔄 Không thể lấy dữ liệu từ: ${finalUrl}`);
+        console.log(`🔄 Không thể lấy dữ liệu từ: ${finalUrl} sau ${retries} lần thử.`);
         return null;
     }
 
@@ -1800,25 +2031,24 @@ class USDTTradingPortable {
                     default: return '1day'; // Fallback
                 }
             case 'gate':
+                // Gate.io API có thể sử dụng format khác cho một số interval
                 switch (interval) {
-                    case '1h': return '60m';
-                    case '4h': return '4h';
-                    case '1d': return '1d';
-                    case '3d': return '3d';
-                    case '1w': return '7d';
-                    case '1M': return '30d';
-                    default: return '1d'; // Fallback
+                    case '1800': return '30m';    // 30 phút
+                    case '3600': return '1h';     // 1 giờ
+                    case '14400': return '4h';    // 4 giờ
+                    case '86400': return '1d';    // 1 ngày
+                    case '259200': return '3d';   // 3 ngày
+                    case '604800': return '1w';   // 1 tuần
+                    default: return interval; // Fallback to original value
                 }
             case 'mexc':
-                switch (interval) {
-                    case '1h': return 'Min60';
-                    case '4h': return 'Min240';
-                    case '1d': return 'Day1';
-                    case '3d': return 'Day3';
-                    case '1w': return 'Week1';
-                    case '1M': return 'Mon1';
-                    default: return 'Day1'; // Fallback
+                // MEXC spot API lacks 3d and sometimes 1w for spot; map them to 1d and aggregate client-side
+                if (interval === '3d' || interval === '1w') {
+                    return '1d';
+                } else if(interval === '1h') {
+                    return '30m';
                 }
+                return interval;
             case 'bybit':
                 switch (interval) {
                     case '1h': return '60';
@@ -1868,12 +2098,21 @@ class USDTTradingPortable {
         intervalSelect.innerHTML = ''; // Clear existing options
 
         const intervalLabels = {
+            '30m': '30 phút',
             '1h': '1 giờ',
             '4h': '4 giờ',
             '1d': '1 ngày',
             '3d': '3 ngày',
             '1w': '1 tuần',
-            '1M': '1 tháng'
+            '1M': '1 tháng',
+            // Thêm nhãn cho các khoảng thời gian bằng giây của Gate.io
+            '1800': '30 phút',
+            '3600': '1 giờ',
+            '14400': '4 giờ',
+            '86400': '1 ngày',
+            '259200': '3 ngày',
+            '604800': '1 tuần',
+            '2592000': '1 tháng'
         };
 
         if (supportedIntervals) {
@@ -1917,6 +2156,8 @@ class USDTTradingPortable {
 
         // Then, based on the error or results, show the appropriate elements
         if (errorMessage) {
+            this.loading.classList.add('hidden'); // Ensure loading is hidden on error
+            this.progressContainer.classList.add('hidden'); // Ensure progress is hidden on error
             this.resultsTitle.classList.remove('hidden'); // Always show title on error
             this.errorMessageContainer.classList.remove('hidden');
             this.errorMessageDetail.textContent = errorMessage;
@@ -1926,6 +2167,8 @@ class USDTTradingPortable {
             this.resultsTitle.classList.remove('hidden');
             this.errorMessageContainer.classList.add('hidden'); // Ensure error message is hidden when showing results
         } else {
+            this.loading.classList.add('hidden'); // Ensure loading is hidden when showing initial content
+            this.progressContainer.classList.add('hidden'); // Ensure progress is hidden when showing initial content
             // No error and no results, show initial content
             this.initialContent.classList.remove('hidden');
             this.resultsArea.style.justifyContent = 'center'; // Center initial content

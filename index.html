@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>USDT Trading</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/x-icon">
 </head>
 <body>
     <div class="app-container">
@@ -108,12 +109,12 @@
             </div>
             
             <div class="button-group">
-                <button class="scan-button" id="scanButton">Bắt đầu quét</button>
+                <button class="scan-button" id="scanButton">Lọc dữ liệu thị trường</button>
             </div>
         </div>
 
         <div class="results-area" id="resultsArea">
-            <!-- Initial Content - displayed when no scan is active -->
+            <!-- Initial Content - displayed when no scan is actijsve -->
             <div id="initialContent" class="initial-display">
                 <h2>Chào mừng bạn đến với USDT Trading!</h2>
                 <p>Công cụ này giúp bạn tìm kiếm các cặp giao dịch tiềm năng trên nhiều sàn tiền điện tử dựa trên các điều kiện nến và khối lượng tùy chỉnh.</p>
@@ -148,11 +149,11 @@
                     <tr>
                         <th>Sàn</th>
                         <th>Cặp</th>
-                        <th>Giá hiện tại</th>
-                        <th>Giá cao nhất</th>
-                        <th>Giá thấp nhất</th>
-                        <th>Thay đổi 24h</th>
-                        <th>Xem trực tiếp</th>
+                        <th>Hiện tại</th>
+                        <th>Cao</th>
+                        <th>Thấp</th>
+                        <th>24h</th>
+                        <th>Xem</th>
                     </tr>
                 </thead>
                 <tbody id="resultsBody">
@@ -166,10 +167,13 @@
             </div>
 
             <div class="copyright-info">
-                <p>&copy; <span id="currentYear">1999</span> USDT Trading. All rights reserved. | Phát triển bởi bạn.</p>
+                <p>&copy; <span id="currentYear">1999</span> USDT Trading. From Bac Ninh With Love.</p>
             </div>
         </div>
     </div>
+
+    <!-- Filter Toggle Button for Mobile -->
+    <button class="filter-toggle-button" id="filterToggleButton">Bộ Lọc</button>
 
     <!-- Chart Modal -->
     <div class="chart-modal" id="chartModal">
@@ -206,10 +210,36 @@
     
     <script src="script.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMCviontentLoaded', () => {
             const currentYearSpan = document.getElementById('currentYear');
             if (currentYearSpan) {
                 currentYearSpan.textContent = new Date().getFullYear();
+            }
+
+            // Mobile filter toggle
+            const filterPanel = document.getElementById('filterPanel');
+            const filterToggleButton = document.getElementById('filterToggleButton');
+
+            if (filterToggleButton && filterPanel) {
+                // Initially set the filter panel state for mobile
+                if (window.innerWidth <= 768) {
+                    filterPanel.classList.remove('show-on-mobile'); // Ensure it's hidden initially on mobile
+                }
+
+                filterToggleButton.addEventListener('click', () => {
+                    filterPanel.classList.toggle('show-on-mobile'); // Toggle this class to show/hide
+                });
+
+                // Adjust filter panel visibility on window resize (e.g., rotating phone)
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth > 768) {
+                        filterPanel.classList.remove('show-on-mobile'); // Remove show class on desktop
+                    } else {
+                        // On mobile, if it was not explicitly shown by toggle, ensure it's hidden.
+                        // Otherwise, if `show-on-mobile` is present, it stays visible.
+                        // No need to add a 'hidden' class now, as default mobile state is hidden by transform.
+                    }
+                });
             }
         });
     </script>
