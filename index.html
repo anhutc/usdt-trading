@@ -210,7 +210,7 @@
     
     <script src="script.js"></script>
     <script>
-        document.addEventListener('DOMCviontentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', () => {
             const currentYearSpan = document.getElementById('currentYear');
             if (currentYearSpan) {
                 currentYearSpan.textContent = new Date().getFullYear();
@@ -221,11 +221,6 @@
             const filterToggleButton = document.getElementById('filterToggleButton');
 
             if (filterToggleButton && filterPanel) {
-                // Initially set the filter panel state for mobile
-                if (window.innerWidth <= 768) {
-                    filterPanel.classList.remove('show-on-mobile'); // Ensure it's hidden initially on mobile
-                }
-
                 filterToggleButton.addEventListener('click', () => {
                     filterPanel.classList.toggle('show-on-mobile'); // Toggle this class to show/hide
                 });

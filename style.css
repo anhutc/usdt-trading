@@ -164,10 +164,6 @@ html, body {
     line-height: 1.2;
 }
 
-.filter-group {
-    /* No default margin-bottom, handled by filter-panel gap */
-}
-
 .input-label {
     display: block;
     margin-bottom: 8px;
@@ -194,6 +190,7 @@ html, body {
 
 .input-field[type="number"] {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .input-field::-webkit-inner-spin-button,
@@ -594,10 +591,12 @@ select.input-field {
     background: #2d2d2d;
     border-radius: 10px;
     padding: 10px;
-    max-width: 95%; /* Increased max-width for desktop */
-    max-height: 95%; /* Increased max-height for desktop */
+    max-width: 100%; /* Increased max-width for desktop */
+    max-height: 100%; /* Increased max-height for desktop */
     overflow: auto;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .chart-header {
@@ -630,8 +629,9 @@ select.input-field {
 }
 
 .chart-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 700px; /* Limit chart info width */
     gap: 15px 25px;
     margin-bottom: 20px;
     padding: 15px;
@@ -658,6 +658,9 @@ select.input-field {
     overflow: hidden;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     border: 1px solid #404040;
+    flex-grow: 1;
+    min-height: 0;
+    width: 100%; /* Ensure chart takes full available width */
 }
 
 .chart-legend {
@@ -809,7 +812,7 @@ select.input-field {
 }
 
 /* Responsive Overrides for Mobile (max-width: 768px) */
-@media (max-width: 999px) {
+@media (max-width: 768px) {
     .app-container {
         display: block; /* Stack elements vertically on mobile */
         height: auto;

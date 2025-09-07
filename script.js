@@ -1304,7 +1304,7 @@ class USDTTradingPortable {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%'); // Adjusted overall height
-        svg.setAttribute('viewBox', '0 0 800 500'); // Adjusted viewBox
+        svg.setAttribute('viewBox', '150 0 500 500'); // Adjusted viewBox
         
         // Calculate chart dimensions
         const chartWidth = 800;
