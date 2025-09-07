@@ -13,7 +13,7 @@
             <div class="filter-title">Bộ Lọc</div>
 
             <div class="filter-group">
-                <label for="maxResults">Giới hạn kết quả (0: không giới hạn):</label>
+                <label for="maxResults">Giới hạn kết quả (0: không giới hạn)</label>
                 <input type="number" id="maxResults" class="input-field" value="0" min="0" max="500">
             </div>
 
@@ -63,11 +63,11 @@
             </div>
 
             <div class="filter-group">
-                <label for="numberOfCandles">Số lượng nến:</label>
+                <label for="numberOfCandles">Số lượng nến</label>
                 <input type="number" id="numberOfCandles" class="input-field" value="6" min="1">
             </div>
             <div class="filter-group">
-                <label for="volumePeriods">Chu kỳ trung bình khối lượng:</label>
+                <label for="volumePeriods">Chu kỳ trung bình khối lượng</label>
                 <input type="number" id="volumePeriods" class="input-field" value="20" min="1" max="100">
             </div>
 
@@ -89,21 +89,21 @@
                     <div class="radio-item">
                         <input type="radio" class="radio-input" id="condition1" name="candleCondition" value="body" checked>
                         <div>
-                            <label class="radio-label" for="condition1">Điều kiện 1: Thân nến < (N)%</label>
+                            <label class="radio-label" for="condition1">Thân nến < (N)%</label>
                             <div class="radio-description">|Giá đóng - Giá mở| / (Giá trần - Giá sàn)</div>
                         </div>
                     </div>
                     <div class="radio-item">
                         <input type="radio" class="radio-input" id="condition2" name="candleCondition" value="priceChange">
                         <div>
-                            <label class="radio-label" for="condition2">Điều kiện 2: Thay đổi giá < (N)%</label>
+                            <label class="radio-label" for="condition2">Thay đổi giá < (N)%</label>
                             <div class="radio-description">|Giá đóng - Giá mở| / Giá mở</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="filter-group">
-                    <label for="conditionValue">Giá trị điều kiện (N):</label>
+                    <label for="conditionValue">Giá trị điều kiện (N)</label>
                     <input type="number" class="input-field" id="conditionValue" value="15" min="1" max="100" step="0.1">
                 </div>
             </div>
