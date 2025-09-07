@@ -49,7 +49,7 @@ class USDTTradingPortable {
             'binance': ['1h', '4h', '1d', '3d', '1w', '1M'],
             'okx': ['1h', '4h', '1d', '1w', '1M'],
             'huobi': ['1h', '4h', '1d', '1w', '1M'],
-            'gate': ['1800', '3600', '86400', '259200', '604800', '2592000'],
+            'gate': ['30m', '1h', '4h', '1d', '3d', '1w', '1M'],
             'mexc': ['30m', '1h', '1d', '3d', '1w', '1M'],
             'bybit': ['1h', '4h', '1d', '1w', '1M']
         };
@@ -72,6 +72,7 @@ class USDTTradingPortable {
         this.corsProxyBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8080' : window.location.origin;
         this.selectedConditions = {}; // Initialize selected conditions object
         this.resultLimit = 5; // Default result limit
+
     }
 
     setupEventListeners() {
@@ -476,7 +477,7 @@ class USDTTradingPortable {
                     break;
                     
                 case 'gate':
-                    const gateData = await this.fetchGateData(symbol, exchangeInterval, limit, selectedInterval);
+                    const gateData = await this.fetchGateData(symbol, exchangeInterval, limit);
                     candles = gateData.candles;
                     volumes = gateData.volumes;
                     break;
@@ -915,45 +916,39 @@ class USDTTradingPortable {
         }
     }
 
-    async fetchGateData(symbol, interval, limit, selectedInterval) {
+    async fetchGateData(symbol, interval, limit) {
         try {
-            // Thử với limit parameter và format khác
+            const gateApiInterval = interval; // Use the provided interval directly
+
             const response = await this.fetchWithFallback(
-                `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${interval}&limit=${limit}`,
-                'gate'
+                `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateApiInterval}&limit=${limit}`,
+                'gate' // Ensure CORS proxy is used for Gate.io
             );
-            console.log(`[DEBUG] Gate.io Raw kline data for ${symbol} with interval ${interval}:`, response); // Log raw response
+            console.log(`[DEBUG] Gate.io Raw kline data for ${symbol} with interval ${gateApiInterval}:`, response); // Log raw response
             if (response && response.length > 0) {
                 console.log(`[DEBUG] Gate.io First candle structure:`, response[0]);
                 console.log(`[DEBUG] Gate.io Last candle structure:`, response[response.length - 1]);
                 console.log(`[DEBUG] Gate.io Data format: [timestamp, volume, close, high, low, open, quote_volume, status]`);
                 
-                // Check time difference between first and second candle
                 if (response.length > 1) {
                     const timeDiff = parseFloat(response[1][0]) - parseFloat(response[0][0]);
                     console.log(`[DEBUG] Gate.io Time difference between candles: ${timeDiff} seconds (${timeDiff/60} minutes, ${timeDiff/3600} hours)`);
-                    console.log(`[DEBUG] Gate.io Expected interval: ${interval} seconds (${parseInt(interval)/60} minutes, ${parseInt(interval)/3600} hours)`);
+                    console.log(`[DEBUG] Gate.io Expected interval: ${gateApiInterval}`);
                 }
             }
 
             if (response && response.length > 0) {
-                const desiredCandleCount = limit; // `limit` ở đây là filters.numberOfCandles
+                const desiredCandleCount = limit; 
                 
-                // Nếu interval lớn hơn 30 phút, gộp dữ liệu 30 phút thành interval mong muốn
-                let processedCandles = response;
-                if (selectedInterval !== '1800') { // Nếu không phải 30 phút
-                    processedCandles = this.aggregateCandlesToInterval(response, selectedInterval);
-                    console.log(`[DEBUG] Gate.io Aggregated ${response.length} 30-min candles into ${processedCandles.length} ${selectedInterval}-second candles`);
-                }
-                
+                // Gate.io API directly returns candles in the requested interval, no aggregation needed.
+                const processedCandles = response;
+
                 // Lấy N nến gần nhất từ cuối mảng (client-side limiting)
                 const recentCandles = processedCandles.slice(-desiredCandleCount);
                 // Gate returns ascending by time; convert to newest-first to align with other exchanges
                 const orderedRecentCandles = recentCandles.slice().reverse();
 
-                const candles = orderedRecentCandles.map((kline, index) => {
-                    // Gate.io API trả về array với format: [timestamp, volume, close, high, low, open, quote_volume, status]
-                    // Dựa trên file log.txt: [0]=timestamp, [1]=volume, [2]=close, [3]=high, [4]=low, [5]=open, [6]=quote_volume, [7]=status
+                const candles = orderedRecentCandles.map((kline) => {
                     const timestamp = parseFloat(kline[0]) * 1000;  // Convert seconds to milliseconds
                     const candle = {
                         timestamp: timestamp,
@@ -964,30 +959,21 @@ class USDTTradingPortable {
                         volume: parseFloat(kline[1])             // Base Volume (index 1)
                     };
                     
-                    // Debug logging for first few candles
-                    if (index < 3) {
-                        const date = new Date(timestamp);
-                        console.log(`[DEBUG] Gate.io Candle ${index + 1}:`, {
-                            rawTimestamp: kline[0],
-                            convertedTimestamp: timestamp,
-                            date: date.toLocaleString('vi-VN'),
-                            interval: interval
-                        });
-                    }
-                    
                     return candle;
                 });
+
                 const volumes = orderedRecentCandles.map(kline => ({ 
                     baseVolume: parseFloat(kline[1]),   // base_volume (index 1)
                     quoteVolume: parseFloat(kline[6])   // quote_volume (index 6)
                 }));
+
                 return { candles, volumes };
             } else {
-                console.log(`📊 Gate ${symbol}: Không có dữ liệu nến`);
+                console.warn(`[WARN] No kline data received for ${symbol} with interval ${gateApiInterval}.`);
                 return { candles: [], volumes: [] };
             }
         } catch (error) {
-            console.error(`Lỗi lấy dữ liệu từ Gate:`, error);
+            console.error(`[ERROR] Error fetching Gate.io data for ${symbol} with interval ${gateApiInterval}:`, error);
             return { candles: [], volumes: [] };
         }
     }
@@ -1890,13 +1876,6 @@ class USDTTradingPortable {
     // Helper method để gọi API với fallback
     async fetchWithFallback(url, exchangeId = null, retries = 3, delay = 1000) {
         let finalUrl = url;
-        // Apply CORS proxy for specific exchanges if needed
-        // Removed CORS proxy for Gate.io and MEXC to test direct API calls.
-        // if ((exchangeId === 'gate' || exchangeId === 'mexc') && !url.startsWith('https://api.allorigins.win')) {
-        //     finalUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        //     console.log(`[DEBUG] Using CORS proxy for ${exchangeId}: ${finalUrl}`);
-        // }
-
         // Use local CORS proxy for Gate.io and MEXC
         if ((exchangeId === 'gate' || exchangeId === 'mexc') && !url.startsWith(`${this.corsProxyBaseUrl}/proxy`)) {
             // Encode the nested URL so query params (e.g., interval=1h) are preserved by the proxy
@@ -2033,13 +2012,13 @@ class USDTTradingPortable {
             case 'gate':
                 // Gate.io API có thể sử dụng format khác cho một số interval
                 switch (interval) {
-                    case '1800': return '30m';    // 30 phút
-                    case '3600': return '1h';     // 1 giờ
-                    case '14400': return '4h';    // 4 giờ
-                    case '86400': return '1d';    // 1 ngày
-                    case '259200': return '3d';   // 3 ngày
-                    case '604800': return '1w';   // 1 tuần
-                    default: return interval; // Fallback to original value
+                    case '30m': return '30m';    // 30 phút
+                    case '1h': return '1h';     // 1 giờ
+                    case '4h': return '4h';    // 4 giờ
+                    case '1d': return '1d';    // 1 ngày
+                    case '3d': return '3d';   // 3 ngày
+                    case '1w': return '1w';   // 1 tuần
+                    default: return '1d'; // Fallback to original value
                 }
             case 'mexc':
                 // MEXC spot API lacks 3d and sometimes 1w for spot; map them to 1d and aggregate client-side
@@ -2104,15 +2083,7 @@ class USDTTradingPortable {
             '1d': '1 ngày',
             '3d': '3 ngày',
             '1w': '1 tuần',
-            '1M': '1 tháng',
-            // Thêm nhãn cho các khoảng thời gian bằng giây của Gate.io
-            '1800': '30 phút',
-            '3600': '1 giờ',
-            '14400': '4 giờ',
-            '86400': '1 ngày',
-            '259200': '3 ngày',
-            '604800': '1 tuần',
-            '2592000': '1 tháng'
+            '1M': '1 tháng'
         };
 
         if (supportedIntervals) {
