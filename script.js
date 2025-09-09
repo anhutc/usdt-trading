@@ -285,7 +285,7 @@ class USDTTradingPortable {
     }
 
     async fetchRealDataFromExchanges(filters) {
-        const exchanges = ['Binance', 'OKX', 'Huobi', 'Gate', 'MEXC', 'Bybit'];
+        const exchanges = ['OKX', 'MEXC', 'Binance', 'Huobi', 'Gate', 'Bybit'];
         const results = [];
         let hasRealData = false;
         
@@ -704,7 +704,7 @@ class USDTTradingPortable {
     }
 
     generateMockResults(filters) {
-        const exchanges = ['Binance', 'OKX', 'Huobi', 'Gate', 'MEXC', 'Bybit'];
+        const exchanges = ['OKX', 'MEXC', 'Binance', 'Huobi', 'Gate', 'Bybit'];
         
         const selectedExchanges = filters.exchanges;
         const results = [];

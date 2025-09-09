@@ -102,7 +102,7 @@ app.get('/test-binance', async (req, res) => {
     }
 });
 
-// Test Gate.io API endpoint
+// Test Gate.io API endpoint with retry
 app.get('/test-gate', async (req, res) => {
     try {
         // Thử nhiều endpoints khác nhau
@@ -117,27 +117,52 @@ app.get('/test-gate', async (req, res) => {
         for (const endpoint of endpoints) {
             try {
                 console.log(`[TEST] Trying endpoint: ${endpoint}`);
-                const response = await fetch(endpoint, {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'Accept': 'application/json',
-                        'Accept-Language': 'en-US,en;q=0.9'
-                    },
-                    timeout: 5000
-                });
                 
-                if (response.ok) {
-                    const data = await response.json();
-                    return res.json({
-                        status: 'success',
-                        message: 'Gate.io API connection successful',
-                        endpoint: endpoint,
-                        dataCount: Array.isArray(data) ? data.length : 'N/A',
-                        sampleData: Array.isArray(data) ? data.slice(0, 3) : data
-                    });
-                } else {
-                    lastError = `Status ${response.status}: ${response.statusText}`;
-                    console.log(`[TEST] Failed: ${endpoint} - ${lastError}`);
+                // Retry logic for Gate.io
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        console.log(`[TEST] Attempt ${attempt}/3 for ${endpoint}`);
+                        
+                        const response = await fetch(endpoint, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                                'Accept': 'application/json, text/plain, */*',
+                                'Accept-Language': 'en-US,en;q=0.9',
+                                'Accept-Encoding': 'gzip, deflate, br',
+                                'Connection': 'keep-alive',
+                                'Origin': 'https://www.gate.io',
+                                'Referer': 'https://www.gate.io/',
+                                'Sec-Fetch-Dest': 'empty',
+                                'Sec-Fetch-Mode': 'cors',
+                                'Sec-Fetch-Site': 'cross-site'
+                            },
+                            method: 'GET',
+                            mode: 'cors',
+                            credentials: 'omit',
+                            timeout: 5000
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            return res.json({
+                                status: 'success',
+                                message: 'Gate.io API connection successful',
+                                endpoint: endpoint,
+                                attempt: attempt,
+                                dataCount: Array.isArray(data) ? data.length : 'N/A',
+                                sampleData: Array.isArray(data) ? data.slice(0, 3) : data
+                            });
+                        } else {
+                            lastError = `Status ${response.status}: ${response.statusText}`;
+                            console.log(`[TEST] Attempt ${attempt} failed: ${endpoint} - ${lastError}`);
+                        }
+                    } catch (err) {
+                        lastError = err.message;
+                        console.log(`[TEST] Attempt ${attempt} error: ${endpoint} - ${err.message}`);
+                        if (attempt < 3) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                        }
+                    }
                 }
             } catch (err) {
                 lastError = err.message;
@@ -148,7 +173,7 @@ app.get('/test-gate', async (req, res) => {
         // Nếu tất cả endpoints đều fail
         res.status(500).json({
             status: 'error',
-            message: 'All Gate.io API endpoints failed',
+            message: 'All Gate.io API endpoints failed after retries',
             lastError: lastError,
             endpoints: endpoints
         });
@@ -239,13 +264,31 @@ app.get('/proxy', async (req, res) => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
+        // Special handling for Gate.io
+        let headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'cross-site'
+        };
+        
+        // Add specific headers for Gate.io
+        if (decodedTargetUrl.includes('gate.io')) {
+            headers['Origin'] = 'https://www.gate.io';
+            headers['Referer'] = 'https://www.gate.io/';
+            headers['X-Requested-With'] = 'XMLHttpRequest';
+        }
+        
         const response = await fetch(decodedTargetUrl, {
             signal: controller.signal,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
-                'Accept-Language': 'en-US,en;q=0.9'
-            }
+            headers: headers,
+            method: 'GET',
+            mode: 'cors',
+            credentials: 'omit'
         });
         
         clearTimeout(timeoutId);
