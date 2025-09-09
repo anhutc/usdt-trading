@@ -590,9 +590,9 @@ class USDTTradingPortable {
     async getGateUSDTPairs() {
         // Thử nhiều endpoints khác nhau
         const endpoints = [
-            'https://api.gate.io/api/v4/spot/currency_pairs',
-            'https://api.gate.io/api/v4/spot/tickers',
-            'https://api.gate.io/api/v4/spot/markets'
+            'https://api.gateio.ws/api/v4/spot/currency_pairs',
+            'https://api.gateio.ws/api/v4/spot/tickers',
+            'https://api.gateio.ws/api/v4/spot/markets'
         ];
         
         for (const endpoint of endpoints) {

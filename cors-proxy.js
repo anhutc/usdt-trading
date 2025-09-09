@@ -107,9 +107,9 @@ app.get('/test-gate', async (req, res) => {
     try {
         // Thử nhiều endpoints khác nhau
         const endpoints = [
-            'https://api.gate.io/api/v4/spot/currency_pairs',
-            'https://api.gate.io/api/v4/spot/tickers',
-            'https://api.gate.io/api/v4/spot/markets'
+            'https://api.gateio.ws/api/v4/spot/currency_pairs',
+            'https://api.gateio.ws/api/v4/spot/tickers',
+            'https://api.gateio.ws/api/v4/spot/markets'
         ];
         
         let lastError = null;
@@ -130,8 +130,8 @@ app.get('/test-gate', async (req, res) => {
                                 'Accept-Language': 'en-US,en;q=0.9',
                                 'Accept-Encoding': 'gzip, deflate, br',
                                 'Connection': 'keep-alive',
-                                'Origin': 'https://www.gate.io',
-                                'Referer': 'https://www.gate.io/',
+                                'Origin': 'https://www.gateio.ws',
+                                'Referer': 'https://www.gateio.ws/',
                                 'Sec-Fetch-Dest': 'empty',
                                 'Sec-Fetch-Mode': 'cors',
                                 'Sec-Fetch-Site': 'cross-site'
@@ -192,7 +192,7 @@ app.get('/test-all-exchanges', async (req, res) => {
     const exchanges = [
         { name: 'Binance', url: 'https://api.binance.com/api/v3/exchangeInfo' },
         { name: 'OKX', url: 'https://www.okx.com/api/v5/public/instruments?instType=SPOT' },
-        { name: 'Gate.io', url: 'https://api.gate.io/api/v4/spot/currency_pairs' },
+        { name: 'Gate.io', url: 'https://api.gateio.ws/api/v4/spot/currency_pairs' },
         { name: 'MEXC', url: 'https://api.mexc.com/api/v3/exchangeInfo' },
         { name: 'Bybit', url: 'https://api.bybit.com/v5/market/instruments-info?category=spot' }
     ];
@@ -278,8 +278,8 @@ app.get('/proxy', async (req, res) => {
         
         // Add specific headers for Gate.io
         if (decodedTargetUrl.includes('gate.io')) {
-            headers['Origin'] = 'https://www.gate.io';
-            headers['Referer'] = 'https://www.gate.io/';
+            headers['Origin'] = 'https://www.gateio.ws';
+            headers['Referer'] = 'https://www.gateio.ws/';
             headers['X-Requested-With'] = 'XMLHttpRequest';
         }
         
