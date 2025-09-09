@@ -1804,7 +1804,7 @@ class USDTTradingPortable {
             case 'huobi':
                 return `https://www.huobi.com/en-us/exchange/${base.toLowerCase()}_${quote.toLowerCase()}`;
             case 'gate':
-                return `https://www.gate.io/trade/${base}_${quote}`;
+                return `https://www.gate.com/trade/${base}_${quote}`;
             case 'mexc':
                 return `https://www.mexc.com/exchange/${base}_${quote}`;
             case 'bybit':
@@ -1871,15 +1871,15 @@ class USDTTradingPortable {
             const response = await fetch(`${this.corsProxyBaseUrl}/health`);
             if (response.ok) {
                 const data = await response.json();
-                console.log('✅ Proxy server connection OK:', data);
-                this.showToast('Proxy server connected successfully', 'success');
+                console.log('✅ Kết nối máy chủ proxy OK:', data);
+                this.showToast('Máy chủ proxy đã kết nối thành công', 'success');
             } else {
-                console.warn('⚠️ Proxy server health check failed:', response.status);
-                this.showToast('Proxy server connection issue', 'warning');
+                console.warn('⚠️ Kiểm tra tình trạng máy chủ proxy không thành công:', response.status);
+                this.showToast('Sự cố kết nối máy chủ proxy', 'warning');
             }
         } catch (error) {
-            console.error('❌ Proxy server connection failed:', error);
-            this.showToast('Cannot connect to proxy server', 'error');
+            console.error('❌ Kết nối máy chủ proxy không thành công:', error);
+            this.showToast('Không thể kết nối với máy chủ proxy', 'error');
         }
     }
 
