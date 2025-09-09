@@ -20,8 +20,18 @@ app.use((req, res, next) => {
     next();
 });
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
+// Serve static files from the current directory with proper MIME types
+app.use(express.static(__dirname, {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css');
+        } else if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        } else if (path.endsWith('.html')) {
+            res.setHeader('Content-Type', 'text/html');
+        }
+    }
+}));
 
 // Root route để đảm bảo index.html được serve
 app.get('/', (req, res) => {
@@ -47,11 +57,72 @@ app.get('/api-info', (req, res) => {
         endpoints: {
             proxy: '/proxy?url=ENCODED_URL',
             health: '/health',
-            apiInfo: '/api-info'
+            apiInfo: '/api-info',
+            testGate: '/test-gate'
         },
         supportedExchanges: ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit'],
         note: 'Use encodeURIComponent() for URL parameter'
     });
+});
+
+// Test Gate.io API endpoint
+app.get('/test-gate', async (req, res) => {
+    try {
+        // Thử nhiều endpoints khác nhau
+        const endpoints = [
+            'https://api.gate.io/api/v4/spot/currency_pairs',
+            'https://api.gate.io/api/v4/spot/tickers',
+            'https://api.gate.io/api/v4/spot/markets'
+        ];
+        
+        let lastError = null;
+        
+        for (const endpoint of endpoints) {
+            try {
+                console.log(`[TEST] Trying endpoint: ${endpoint}`);
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Accept': 'application/json',
+                        'Accept-Language': 'en-US,en;q=0.9'
+                    },
+                    timeout: 5000
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    return res.json({
+                        status: 'success',
+                        message: 'Gate.io API connection successful',
+                        endpoint: endpoint,
+                        dataCount: Array.isArray(data) ? data.length : 'N/A',
+                        sampleData: Array.isArray(data) ? data.slice(0, 3) : data
+                    });
+                } else {
+                    lastError = `Status ${response.status}: ${response.statusText}`;
+                    console.log(`[TEST] Failed: ${endpoint} - ${lastError}`);
+                }
+            } catch (err) {
+                lastError = err.message;
+                console.log(`[TEST] Error: ${endpoint} - ${err.message}`);
+            }
+        }
+        
+        // Nếu tất cả endpoints đều fail
+        res.status(500).json({
+            status: 'error',
+            message: 'All Gate.io API endpoints failed',
+            lastError: lastError,
+            endpoints: endpoints
+        });
+        
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to connect to Gate.io API',
+            error: error.message
+        });
+    }
 });
 
 app.get('/proxy', async (req, res) => {
@@ -67,7 +138,20 @@ app.get('/proxy', async (req, res) => {
         console.log('[DEBUG] Original URL:', targetUrl);
         console.log('[DEBUG] Decoded URL:', decodedTargetUrl);
         
-        const response = await fetch(decodedTargetUrl);
+        // Thêm timeout và retry logic
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(decodedTargetUrl, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
+        });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
             console.error(`[ERROR] API responded with status ${response.status}: ${response.statusText}`);
@@ -84,10 +168,22 @@ app.get('/proxy', async (req, res) => {
     } catch (error) {
         console.error('[ERROR] Proxy request failed:', error.message);
         console.error('[ERROR] Target URL:', targetUrl);
+        console.error('[ERROR] Error type:', error.name);
+        
+        let errorMessage = error.message;
+        if (error.name === 'AbortError') {
+            errorMessage = 'Request timeout';
+        } else if (error.code === 'ENOTFOUND') {
+            errorMessage = 'DNS resolution failed';
+        } else if (error.code === 'ECONNREFUSED') {
+            errorMessage = 'Connection refused';
+        }
+        
         res.status(500).json({
             error: 'Proxy request failed',
-            message: error.message,
-            url: targetUrl
+            message: errorMessage,
+            url: targetUrl,
+            errorType: error.name
         });
     }
 });

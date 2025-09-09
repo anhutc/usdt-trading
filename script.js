@@ -588,20 +588,56 @@ class USDTTradingPortable {
     }
 
     async getGateUSDTPairs() {
-        const data = await this.fetchWithFallback('https://api.gate.io/api/v4/spot/currency_pairs', 'gate');
-        if (!data) {
-            console.warn('[WARN] Gate: Không có dữ liệu currency_pairs từ API. Bỏ qua sàn này.');
-            return;
-        }
-        console.log('[DEBUG] Gate.io Raw currency_pairs response:', data);
+        // Thử nhiều endpoints khác nhau
+        const endpoints = [
+            'https://api.gate.io/api/v4/spot/currency_pairs',
+            'https://api.gate.io/api/v4/spot/tickers',
+            'https://api.gate.io/api/v4/spot/markets'
+        ];
         
-        if (data && data.length > 0) {
-            return data
-                .filter(pair => pair.quote === 'USDT' && pair.trade_status === 'tradable')
-                .map(pair => pair.base + '/USDT');
+        for (const endpoint of endpoints) {
+            try {
+                console.log(`[DEBUG] Trying Gate.io endpoint: ${endpoint}`);
+                const data = await this.fetchWithFallback(endpoint, 'gate');
+                if (data && Array.isArray(data)) {
+                    console.log(`[SUCCESS] Gate.io endpoint working: ${endpoint}`);
+                    return this.filterGateUSDTPairs(data);
+                }
+            } catch (error) {
+                console.log(`[ERROR] Gate.io endpoint failed: ${endpoint} - ${error.message}`);
+            }
         }
-        console.warn('[WARN] Gate: Không có dữ liệu currency_pairs từ API. Bỏ qua sàn này.');
+        
+        console.warn('[WARN] All Gate.io endpoints failed');
         return [];
+    }
+
+    filterGateUSDTPairs(data) {
+        if (!data || !Array.isArray(data)) {
+            return [];
+        }
+        
+        return data
+            .filter(pair => {
+                // Handle different data structures
+                if (pair.quote === 'USDT' && pair.trade_status === 'tradable') {
+                    return true;
+                }
+                if (pair.symbol && pair.symbol.endsWith('_USDT')) {
+                    return true;
+                }
+                return false;
+            })
+            .map(pair => {
+                if (pair.base && pair.quote) {
+                    return pair.base + '/USDT';
+                }
+                if (pair.symbol) {
+                    return pair.symbol.replace('_', '/');
+                }
+                return null;
+            })
+            .filter(pair => pair !== null);
     }
 
     async getMEXCUSDTPairs() {
