@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 // Không cần require('node-fetch') nữa vì Node.js v18+ đã có fetch tích hợp sẵn.
 
 const app = express();
@@ -19,7 +20,14 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(express.static(__dirname)); // Serve static files from the current directory
+// Serve static files from the current directory
+app.use(express.static(__dirname));
+
+// Root route để đảm bảo index.html được serve
+app.get('/', (req, res) => {
+    console.log('[ROOT] Serving index.html');
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -82,6 +90,12 @@ app.get('/proxy', async (req, res) => {
             url: targetUrl
         });
     }
+});
+
+// Fallback route để serve index.html cho SPA
+app.get('*', (req, res) => {
+    console.log(`[FALLBACK] Serving index.html for: ${req.path}`);
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Thêm keep-alive để tránh sleep trên Render free tier
