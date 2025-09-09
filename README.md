@@ -17,8 +17,7 @@
 
 <img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/0f3f22ec-03b4-4de4-b3cf-c430d16eeb05" />
 
-<img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/eedfb03d-5f72-4c2b-86ee-d5ad4bfa236a" />
-
+<img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/2bfc2be2-df97-418d-9060-b76f84c34b9e" />
 
 **Được phát triển bởi:** [DVA]
 **Năm:** 2025
