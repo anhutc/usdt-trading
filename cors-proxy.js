@@ -16,16 +16,33 @@ app.get('/proxy', async (req, res) => {
     }
 
     try {
-        // Đã xóa giải mã URL một lần nữa vì encodeURIComponent đã được xóa ở phía client.
-        // const decodedTargetUrl = decodeURIComponent(targetUrl);
-        // console.log('[DEBUG] Proxying decoded URL:', decodedTargetUrl);
-        console.log('[DEBUG] Proxying URL:', targetUrl); // Đổi lại để log targetUrl trực tiếp
-        const response = await fetch(targetUrl); // Sử dụng targetUrl đã được giải mã một lần bởi Express
+        // Decode URL để tránh double encoding
+        const decodedTargetUrl = decodeURIComponent(targetUrl);
+        console.log('[DEBUG] Original URL:', targetUrl);
+        console.log('[DEBUG] Decoded URL:', decodedTargetUrl);
+        
+        const response = await fetch(decodedTargetUrl);
+        
+        if (!response.ok) {
+            console.error(`[ERROR] API responded with status ${response.status}: ${response.statusText}`);
+            return res.status(response.status).json({
+                error: `API request failed with status ${response.status}`,
+                message: response.statusText,
+                url: decodedTargetUrl
+            });
+        }
+        
         const data = await response.json();
+        console.log('[SUCCESS] Proxy request completed successfully');
         res.json(data);
     } catch (error) {
-        console.error('Error in proxy request:', error);
-        res.status(500).send('Proxy error');
+        console.error('[ERROR] Proxy request failed:', error.message);
+        console.error('[ERROR] Target URL:', targetUrl);
+        res.status(500).json({
+            error: 'Proxy request failed',
+            message: error.message,
+            url: targetUrl
+        });
     }
 });
 

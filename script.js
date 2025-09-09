@@ -585,7 +585,7 @@ class USDTTradingPortable {
     }
 
     async getGateUSDTPairs() {
-        const data = await this.fetchWithFallback('https://api.gateio.ws/api/v4/spot/currency_pairs', 'gate');
+        const data = await this.fetchWithFallback('https://api.gate.io/api/v4/spot/currency_pairs', 'gate');
         if (!data) {
             console.warn('[WARN] Gate: Không có dữ liệu currency_pairs từ API. Bỏ qua sàn này.');
             return;
@@ -846,7 +846,7 @@ class USDTTradingPortable {
             const gateApiInterval = interval;
 
             const response = await this.fetchWithFallback(
-                `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateApiInterval}&limit=${limit}`,
+                `https://api.gate.io/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateApiInterval}&limit=${limit}`,
                 'gate'
             );
             console.log(`[DEBUG] Gate.io Raw kline data for ${symbol} with interval ${gateApiInterval}:`, response);
@@ -1622,12 +1622,21 @@ class USDTTradingPortable {
                     delay *= 2;
                 } else {
                     console.warn(`⚠️ API call thất bại với status ${response.status}: ${finalUrl}`);
+                    
+                    // Thử parse error response để hiển thị thông tin chi tiết hơn
+                    try {
+                        const errorData = await response.json();
+                        console.error(`[ERROR] API Error Details:`, errorData);
+                    } catch (parseError) {
+                        console.error(`[ERROR] Could not parse error response`);
+                    }
+                    
                     this.showToast(`API call thất bại (${response.status}).`, 'error');
                     break;
                 }
             } catch (error) {
                 console.error(`❌ Lỗi fetch từ ${finalUrl}:`, error);
-                this.showToast(`Lỗi kết nối API.`, 'error');
+                this.showToast(`Lỗi kết nối API: ${error.message}`, 'error');
                 break;
             }
         }
