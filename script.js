@@ -885,7 +885,7 @@ class USDTTradingPortable {
             const gateApiInterval = interval;
 
             const response = await this.fetchWithFallback(
-                `https://api.gate.io/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateApiInterval}&limit=${limit}`,
+                `https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateApiInterval}&limit=${limit}`,
                 'gate'
             );
             console.log(`[DEBUG] Gate.io Raw kline data for ${symbol} with interval ${gateApiInterval}:`, response);
