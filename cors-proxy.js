@@ -58,11 +58,48 @@ app.get('/api-info', (req, res) => {
             proxy: '/proxy?url=ENCODED_URL',
             health: '/health',
             apiInfo: '/api-info',
-            testGate: '/test-gate'
+            testBinance: '/test-binance',
+            testGate: '/test-gate',
+            testAllExchanges: '/test-all-exchanges'
         },
         supportedExchanges: ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit'],
         note: 'Use encodeURIComponent() for URL parameter'
     });
+});
+
+// Test Binance API endpoint
+app.get('/test-binance', async (req, res) => {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/exchangeInfo', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json'
+            },
+            timeout: 5000
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            res.json({
+                status: 'success',
+                message: 'Binance API connection successful',
+                dataCount: data.symbols ? data.symbols.length : 'N/A',
+                sampleData: data.symbols ? data.symbols.slice(0, 3) : data
+            });
+        } else {
+            res.status(response.status).json({
+                status: 'error',
+                message: `Binance API returned ${response.status}`,
+                statusText: response.statusText
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to connect to Binance API',
+            error: error.message
+        });
+    }
 });
 
 // Test Gate.io API endpoint
@@ -123,6 +160,66 @@ app.get('/test-gate', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// Test all exchanges endpoint
+app.get('/test-all-exchanges', async (req, res) => {
+    const exchanges = [
+        { name: 'Binance', url: 'https://api.binance.com/api/v3/exchangeInfo' },
+        { name: 'OKX', url: 'https://www.okx.com/api/v5/public/instruments?instType=SPOT' },
+        { name: 'Gate.io', url: 'https://api.gate.io/api/v4/spot/currency_pairs' },
+        { name: 'MEXC', url: 'https://api.mexc.com/api/v3/exchangeInfo' },
+        { name: 'Bybit', url: 'https://api.bybit.com/v5/market/instruments-info?category=spot' }
+    ];
+    
+    const results = [];
+    
+    for (const exchange of exchanges) {
+        try {
+            console.log(`[TEST-ALL] Testing ${exchange.name}: ${exchange.url}`);
+            const response = await fetch(exchange.url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'application/json'
+                },
+                timeout: 5000
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                results.push({
+                    exchange: exchange.name,
+                    status: 'success',
+                    url: exchange.url,
+                    dataCount: Array.isArray(data) ? data.length : (data.symbols ? data.symbols.length : 'N/A')
+                });
+            } else {
+                results.push({
+                    exchange: exchange.name,
+                    status: 'error',
+                    url: exchange.url,
+                    error: `Status ${response.status}: ${response.statusText}`
+                });
+            }
+        } catch (error) {
+            results.push({
+                exchange: exchange.name,
+                status: 'error',
+                url: exchange.url,
+                error: error.message
+            });
+        }
+    }
+    
+    res.json({
+        message: 'All exchanges test results',
+        results: results,
+        summary: {
+            total: exchanges.length,
+            successful: results.filter(r => r.status === 'success').length,
+            failed: results.filter(r => r.status === 'error').length
+        }
+    });
 });
 
 app.get('/proxy', async (req, res) => {
