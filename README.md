@@ -10,5 +10,15 @@
 -   Giao diện người dùng đáp ứng cho máy tính để bàn và thiết bị di động.
 -   Tích hợp proxy CORS để vượt qua các hạn chế cross-origin cho các cuộc gọi API của Gate và MEXC.
 
+## Hình ảnh
+<img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/99c5ddc4-186b-4cd0-abde-9180d2c78711" />
+
+<img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/a109a24d-4225-495c-9a9c-930ce91beed3" />
+
+<img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/0f3f22ec-03b4-4de4-b3cf-c430d16eeb05" />
+
+<img width="1738" height="870" alt="image" src="https://github.com/user-attachments/assets/eedfb03d-5f72-4c2b-86ee-d5ad4bfa236a" />
+
+
 **Được phát triển bởi:** [DVA]
 **Năm:** 2025
