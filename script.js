@@ -59,6 +59,9 @@ class USDTTradingPortable {
         this.updateDisplayState();
 
         this.corsProxyBaseUrl = window.location.hostname === 'localhost' ? 'http://localhost:8080' : window.location.origin;
+        
+        // Kiểm tra kết nối đến proxy server
+        this.checkProxyConnection();
         this.selectedConditions = {};
         this.resultLimit = 5;
 
@@ -1825,6 +1828,23 @@ class USDTTradingPortable {
                 label.classList.remove('highlighted');
             }
         });
+    }
+
+    async checkProxyConnection() {
+        try {
+            const response = await fetch(`${this.corsProxyBaseUrl}/health`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log('✅ Proxy server connection OK:', data);
+                this.showToast('Proxy server connected successfully', 'success');
+            } else {
+                console.warn('⚠️ Proxy server health check failed:', response.status);
+                this.showToast('Proxy server connection issue', 'warning');
+            }
+        } catch (error) {
+            console.error('❌ Proxy server connection failed:', error);
+            this.showToast('Cannot connect to proxy server', 'error');
+        }
     }
 
     updateDisplayState(results, errorMessage = null) {

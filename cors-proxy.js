@@ -5,8 +5,46 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 8080; // Use Heroku's PORT environment variable or default to 8080
 
-app.use(cors()); // Kích hoạt CORS cho tất cả các request
+// Cấu hình CORS chi tiết hơn
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
+}));
+
+// Thêm middleware để log requests
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
 app.use(express.static(__dirname)); // Serve static files from the current directory
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        version: '1.0.0'
+    });
+});
+
+// API info endpoint
+app.get('/api-info', (req, res) => {
+    res.json({
+        message: 'USDT Trading CORS Proxy',
+        endpoints: {
+            proxy: '/proxy?url=ENCODED_URL',
+            health: '/health',
+            apiInfo: '/api-info'
+        },
+        supportedExchanges: ['binance', 'okx', 'huobi', 'gate', 'mexc', 'bybit'],
+        note: 'Use encodeURIComponent() for URL parameter'
+    });
+});
 
 app.get('/proxy', async (req, res) => {
     const targetUrl = req.query.url;
@@ -46,9 +84,17 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
+// Thêm keep-alive để tránh sleep trên Render free tier
+setInterval(() => {
+    console.log(`[KEEP-ALIVE] Server running for ${Math.floor(process.uptime())} seconds`);
+}, 30000); // Ping mỗi 30 giây
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 USDT Trading CORS Proxy server running on port ${PORT}`);
     console.log(`📊 Frontend available at: http://localhost:${PORT}`);
     console.log(`🔗 Proxy endpoint: http://localhost:${PORT}/proxy?url=YOUR_TARGET_URL`);
+    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+    console.log(`📋 API info: http://localhost:${PORT}/api-info`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`⏰ Server started at: ${new Date().toISOString()}`);
 });
