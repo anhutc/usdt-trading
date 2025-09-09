@@ -3,10 +3,12 @@ services:
     name: usdt-trading
     env: node
     plan: free
-    buildCommand: npm ci
+    buildCommand: npm ci --prefer-offline
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: NPM_CONFIG_PRODUCTION
+        value: false
+      - key: NPM_CONFIG_FUND
         value: false

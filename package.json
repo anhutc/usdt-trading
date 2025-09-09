@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "USDT Trading Application with CORS Proxy",
   "main": "cors-proxy.js",
-  "packageManager": "npm@10.0.0",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=10.0.0"
