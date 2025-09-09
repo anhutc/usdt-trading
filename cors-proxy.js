@@ -29,7 +29,9 @@ app.get('/proxy', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`CORS Proxy server running on http://localhost:${PORT}`);
-    console.log(`Use it by making requests to http://localhost:${PORT}/proxy?url=YOUR_TARGET_URL`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 USDT Trading CORS Proxy server running on port ${PORT}`);
+    console.log(`📊 Frontend available at: http://localhost:${PORT}`);
+    console.log(`🔗 Proxy endpoint: http://localhost:${PORT}/proxy?url=YOUR_TARGET_URL`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });

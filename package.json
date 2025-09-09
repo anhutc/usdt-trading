@@ -1,10 +1,21 @@
 {
+  "name": "usdt-trading",
+  "version": "1.0.0",
+  "description": "USDT Trading Application with CORS Proxy",
+  "main": "cors-proxy.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "node-fetch": "^3.3.2"
   },
   "scripts": {
-    "start": "node cors-proxy.js"
-  }
+    "start": "node cors-proxy.js",
+    "dev": "node cors-proxy.js"
+  },
+  "keywords": ["trading", "crypto", "usdt", "cors", "proxy"],
+  "author": "USDT Trading Team",
+  "license": "MIT"
 }
