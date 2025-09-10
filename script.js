@@ -1720,15 +1720,6 @@ class USDTTradingPortable {
         this.chartRange.textContent = `${amplitudePercent}%`;
         this.chartRange.style.color = '#ffd700';
 
-        this.chartSma7.textContent = `${sma7}`;
-        this.chartSma7.style.color = '#ffd700';
-
-        this.chartSma25.textContent = `${sma25}`;
-        this.chartSma25.style.color = '#FF69B4';
-
-        this.chartSma99.textContent = `${sma99}`;
-        this.chartSma99.style.color = '#9370DB';
-
         this.chartBaseAsset.textContent = baseAsset;
         this.chartVolumeBase.textContent = currentVolume.baseVolume.toLocaleString('en-US', { maximumFractionDigits: 0 });
         
