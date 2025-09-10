@@ -1700,9 +1700,6 @@ class USDTTradingPortable {
         const changeSign = changePercent > 0 ? '+' : '';
         const amplitudePercent = ((high - low) / low * 100).toFixed(2);
         const candlesForSMA = candleData.slice(0, hoverIndex + 1);
-        const sma7 = this.calculateSMA(candlesForSMA, 7);
-        const sma25 = this.calculateSMA(candlesForSMA, 25);
-        const sma99 = this.calculateSMA(candlesForSMA, 99);
 
         const currentVolume = volumeData[hoverIndex];
         
@@ -1812,14 +1809,6 @@ class USDTTradingPortable {
             default:
                 return `#`;
         }
-    }
-
-    calculateSMA(data, period) {
-        if (data.length < period) {
-            return 'N/A';
-        }
-        const sum = data.slice(-period).reduce((acc, candle) => acc + candle.close, 0);
-        return (sum / period).toFixed(2);
     }
 
     populateExchangeIntervalOptions(exchangeId) {
