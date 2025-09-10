@@ -20,9 +20,6 @@ class USDTTradingPortable {
         this.chartClose = document.getElementById('chartClose');
         this.chartChange = document.getElementById('chartChange');
         this.chartRange = document.getElementById('chartRange');
-        this.chartSma7 = document.getElementById('chartSma7');
-        this.chartSma25 = document.getElementById('chartSma25');
-        this.chartSma99 = document.getElementById('chartSma99');
         this.chartBaseAsset = document.getElementById('chartBaseAsset');
         this.chartVolumeBase = document.getElementById('chartVolumeBase');
         this.chartVolumeQuote = document.getElementById('chartVolumeQuote');
