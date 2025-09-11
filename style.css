@@ -9,7 +9,7 @@ html, body {
     background: #1a1a1a;
     color: #ffffff;
     overflow-x: hidden; 
-    user-select: none;
+/*     user-select: none; */
 }
 .app-container {
     display: flex;
