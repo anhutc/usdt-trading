@@ -2,7 +2,6 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?logo=github)](https://github.com/anhutc/usdt-trading)
 [![Web Application](https://img.shields.io/badge/Web-App-brightgreen)](https://anhutc.github.io/usdt-trading/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <div align="center">
 
