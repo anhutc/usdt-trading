@@ -7,7 +7,7 @@
 
 **Công cụ phân tích thị trường tiền điện tử đa sàn giao dịch với tính năng quét và phát hiện cơ hội giao dịch USDT**
 
-[🌐 Live Demo](https://anhutc.github.io/usdt-trading/) • [📁 Source Code](https://github.com/anhutc/usdt-trading)
+[🌐 Live Demo](https://anhutc.github.io/usdt.html) • [📁 Source Code](https://github.com/anhutc/usdt-trading)
 
 </div>
 
@@ -51,13 +51,6 @@ cd usdt-trading
 python -m http.server 8000
 # Truy cập: http://localhost:8000
 ```
-
-### Sử Dụng GitHub Pages
-
-Dự án đã được tối ưu cho GitHub Pages. Chỉ cần:
-1. Push code lên repository `usdt-trading`
-2. Kích hoạt GitHub Pages trong settings
-3. Truy cập: `https://anhutc.github.io/usdt-trading/`
 
 ## 📖 Hướng Dẫn Sử Dụng
 
