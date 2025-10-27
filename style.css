@@ -120,6 +120,9 @@ html, body {
 .radio-item:last-child {
     margin-bottom: 0;
 }
+.radio-input input:checked {
+    accent-color: #ffd700;
+}
 .radio-input {
     margin-right: 10px;
     transform: scale(1.1);
